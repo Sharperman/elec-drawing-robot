@@ -1,0 +1,228 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   基础变量
+   ============================================================ */
+:root {
+  --sidebar-width: 260px;
+  --preview-min-width: 360px;
+  --chat-width: 380px;
+  --statusbar-height: 32px;
+  --header-height: 48px;
+}
+
+/* ============================================================
+   全局重置
+   ============================================================ */
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  body {
+    @apply bg-gray-950 text-gray-100 font-sans;
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    user-select: none;
+  }
+
+  /* 允许特定区域文字选择 */
+  .selectable {
+    user-select: text;
+  }
+
+  /* 滚动条样式 */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-600 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-500;
+  }
+
+  /* 焦点样式 */
+  :focus-visible {
+    @apply outline-none ring-2 ring-blue-500 ring-offset-1 ring-offset-gray-900;
+  }
+}
+
+/* ============================================================
+   自定义组件样式
+   ============================================================ */
+@layer components {
+  /* 按钮基础 */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-md
+           text-sm font-medium transition-colors duration-150
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply btn bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800;
+  }
+
+  .btn-secondary {
+    @apply btn bg-gray-700 text-gray-100 hover:bg-gray-600 active:bg-gray-500;
+  }
+
+  .btn-ghost {
+    @apply btn bg-transparent text-gray-400 hover:bg-gray-800 hover:text-gray-100;
+  }
+
+  .btn-danger {
+    @apply btn bg-red-600 text-white hover:bg-red-700;
+  }
+
+  /* 输入框 */
+  .input-base {
+    @apply w-full px-3 py-2 rounded-md border border-gray-600 bg-gray-800
+           text-gray-100 placeholder-gray-500 text-sm
+           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+           transition-colors duration-150;
+  }
+
+  /* input-field 是 input-base 的别名，供配置页组件使用 */
+  .input-field {
+    @apply input-base;
+  }
+
+  /* 卡片 */
+  .card {
+    @apply bg-gray-800 rounded-lg border border-gray-700 p-4;
+  }
+
+  /* 分隔线 */
+  .divider {
+    @apply border-t border-gray-700 my-2;
+  }
+
+  /* 状态指示点 */
+  .status-dot {
+    @apply inline-block w-2 h-2 rounded-full;
+  }
+
+  .status-dot-green {
+    @apply status-dot bg-green-400 animate-pulse;
+  }
+
+  .status-dot-red {
+    @apply status-dot bg-red-400;
+  }
+
+  .status-dot-yellow {
+    @apply status-dot bg-yellow-400 animate-pulse;
+  }
+
+  .status-dot-gray {
+    @apply status-dot bg-gray-500;
+  }
+}
+
+/* ============================================================
+   Markdown 内容样式（对话气泡内）
+   ============================================================ */
+@layer utilities {
+  /* 自定义滚动条辅助类 */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #4b5563 transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #4b5563;
+    border-radius: 9999px;
+  }
+
+  .prose-chat {
+    @apply text-sm text-gray-100 leading-relaxed;
+  }
+
+  .prose-chat h1,
+  .prose-chat h2,
+  .prose-chat h3 {
+    @apply font-semibold text-gray-50 mt-3 mb-1;
+  }
+
+  .prose-chat p {
+    @apply mb-2 last:mb-0;
+  }
+
+  .prose-chat ul,
+  .prose-chat ol {
+    @apply pl-4 mb-2 space-y-0.5;
+  }
+
+  .prose-chat li {
+    @apply text-gray-200;
+  }
+
+  .prose-chat ul > li {
+    @apply list-disc;
+  }
+
+  .prose-chat ol > li {
+    @apply list-decimal;
+  }
+
+  .prose-chat code {
+    @apply px-1 py-0.5 rounded bg-gray-700 text-blue-300 font-mono text-xs;
+  }
+
+  .prose-chat pre {
+    @apply p-3 rounded-md bg-gray-900 overflow-x-auto mb-2;
+  }
+
+  .prose-chat pre code {
+    @apply bg-transparent p-0 text-gray-300;
+  }
+
+  .prose-chat blockquote {
+    @apply border-l-2 border-blue-500 pl-3 text-gray-400 italic;
+  }
+
+  .prose-chat table {
+    @apply w-full text-sm border-collapse mb-2;
+  }
+
+  .prose-chat th,
+  .prose-chat td {
+    @apply border border-gray-600 px-2 py-1 text-left;
+  }
+
+  .prose-chat th {
+    @apply bg-gray-700 font-semibold;
+  }
+
+  /* 流式输出光标 */
+  .streaming-cursor::after {
+    content: '▋';
+    @apply text-blue-400 animate-pulse;
+  }
+}

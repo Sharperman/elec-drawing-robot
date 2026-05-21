@@ -1,0 +1,70 @@
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.whl
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# ===== 虚拟环境 =====
+.venv/
+venv/
+env/
+.env
+*.env
+!.env.example
+
+# ===== 数据库 & 向量库 =====
+*.db
+*.sqlite
+*.sqlite3
+backend/data/chroma/
+backend/data/db/
+
+# ===== 模型文件（体积大，用 Git LFS 或独立管理）=====
+backend/recognition/models/*.pt
+backend/recognition/models/*.onnx
+backend/recognition/models/*.engine
+
+# ===== 日志 =====
+logs/
+*.log
+
+# ===== Node / Electron =====
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/dist-electron/
+frontend/.vite/
+*.tsbuildinfo
+
+# ===== 构建产物 =====
+out/
+release/
+*.exe
+*.msi
+*.dmg
+*.AppImage
+
+# ===== IDE & 系统 =====
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===== 测试临时文件 =====
+tests/fixtures/temp/
+tests/.cache/

@@ -1,0 +1,154 @@
+classDiagram
+    %% ── 领域模型 ──────────────────────────────────────────────
+
+    class Symbol {
+        +String id
+        +String name
+        +String category
+        +String standard_code
+        +String block_name
+        +String block_file_path
+        +Dict default_attributes
+        +String description
+        +String thumbnail_base64
+        +DateTime created_at
+        +to_dict() Dict
+    }
+
+    class DrawingStandard {
+        +String id
+        +String name
+        +String version
+        +String standard_type
+        +List~LayerConfig~ layers
+        +Dict font_config
+        +Dict line_type_config
+        +Dict color_map
+        +String frame_block_name
+        +is_active() bool
+        +apply_to_drawing(acad_conn) void
+    }
+
+    class LayerConfig {
+        +String layer_name
+        +String color
+        +String line_type
+        +Float line_weight
+        +String description
+    }
+
+    class DrawingSession {
+        +String id
+        +String project_name
+        +String dwg_file_path
+        +String active_standard_id
+        +List~ChatMessage~ messages
+        +Dict drawing_context
+        +DateTime created_at
+        +DateTime updated_at
+        +add_message(msg) void
+        +get_context_summary() String
+    }
+
+    class ChatMessage {
+        +String id
+        +String session_id
+        +String role
+        +String content
+        +String message_type
+        +Dict metadata
+        +DateTime timestamp
+    }
+
+    %% ── 指令对象 ──────────────────────────────────────────────
+
+    class DrawCommand {
+        +String command_id
+        +String session_id
+        +String command_type
+        +List~DrawAction~ actions
+        +Dict constraints
+        +String raw_instruction
+        +String parsed_intent
+        +CommandStatus status
+        +DateTime created_at
+        +validate() bool
+        +to_autocad_ops() List~AutoCADOperation~
+    }
+
+    class DrawAction {
+        +String action_type
+        +String symbol_id
+        +Tuple~float,float~ position
+        +float rotation
+        +float scale
+        +Dict attributes
+        +String target_layer
+        +List~ConnectionPoint~ connections
+    }
+
+    class AutoCADOperation {
+        +String op_type
+        +Dict params
+        +int retry_count
+        +bool executed
+        +String result_handle
+        +execute(acad) bool
+        +rollback(acad) bool
+    }
+
+    %% ── 识别结果 ──────────────────────────────────────────────
+
+    class RecognitionResult {
+        +String image_id
+        +List~DetectedElement~ elements
+        +float processing_time_ms
+        +String model_version
+        +Dict raw_inference
+        +to_description() String
+    }
+
+    class DetectedElement {
+        +String element_type
+        +String symbol_id
+        +List~float~ bbox
+        +float confidence
+        +Dict attributes
+        +String description
+    }
+
+    %% ── 反馈模型 ──────────────────────────────────────────────
+
+    class UserFeedback {
+        +String id
+        +String session_id
+        +String command_id
+        +String feedback_type
+        +String content
+        +int rating
+        +DateTime created_at
+    }
+
+    class LearnedRule {
+        +String id
+        +String rule_type
+        +String condition
+        +String action
+        +int priority
+        +float confidence_score
+        +bool is_active
+        +String source_feedback_ids
+        +apply_to_prompt(prompt) String
+    }
+
+    %% ── 关系 ──────────────────────────────────────────────────
+
+    DrawingStandard "1" *-- "many" LayerConfig
+    DrawingSession "1" *-- "many" ChatMessage
+    DrawCommand "1" *-- "many" DrawAction
+    DrawAction "1" ..> "1" Symbol : references
+    DrawCommand "1" *-- "many" AutoCADOperation
+    RecognitionResult "1" *-- "many" DetectedElement
+    DetectedElement "1" ..> "1" Symbol : maps to
+    UserFeedback "many" ..> "1" DrawCommand : about
+    LearnedRule ..> UserFeedback : derived from

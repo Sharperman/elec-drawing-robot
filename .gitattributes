@@ -1,0 +1,16 @@
+# Windows 下统一换行符策略：入库时转换为 LF，checkout 时自动转换为 CRLF
+* text=auto eol=lf
+
+# 二进制文件不转换
+*.pt binary
+*.onnx binary
+*.engine binary
+*.db binary
+*.sqlite binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.exe binary
+*.dll binary

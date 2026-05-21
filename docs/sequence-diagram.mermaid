@@ -1,0 +1,85 @@
+%% 流程 A：文字指令绘图（主流程）
+
+sequenceDiagram
+    actor User as 用户
+    participant UI as React前端(ChatPanel)
+    participant API as FastAPI(chat.py)
+    participant Agent as DrawAgent(LangChain)
+    participant RAG as RAGRetriever(ChromaDB)
+    participant FB as FeedbackInjector
+    participant CTX as ContextManager
+    participant ACAD as AutoCADAdapter(COM)
+
+    User->>UI: 输入文字指令（如"在10kV母线加断路器"）
+    UI->>API: POST /api/chat {session_id, content}
+    API->>CTX: get_context(session_id)
+    CTX-->>API: 历史消息摘要 + 当前图纸状态
+
+    API->>RAG: retrieve_relevant_standards(instruction)
+    RAG-->>API: 相关规范片段（图层名、符号规则等）
+
+    API->>FB: get_active_rules(session_id)
+    FB-->>API: 已学习的用户偏好规则
+
+    API->>Agent: invoke(instruction, context, standards, rules)
+    Note over Agent: LangChain AgentExecutor<br/>Tool-Calling循环开始
+
+    Agent->>Agent: 调用 insert_element Tool
+    Agent->>ACAD: insert_block(symbol_id, position, layer, attrs)
+
+    alt AutoCAD 操作成功
+        ACAD-->>Agent: {handle: "ABC123", status: "ok"}
+    else AutoCAD 操作失败
+        ACAD-->>Agent: ConnectionError / OperationError
+        Agent->>ACAD: retry (最多3次，指数退避)
+        ACAD-->>Agent: 重试结果
+    end
+
+    Agent->>ACAD: draw_connection(from_handle, to_handle)
+    ACAD-->>Agent: {handle: "DEF456", status: "ok"}
+
+    Agent-->>API: AgentResponse{actions_taken, result_description}
+    API->>CTX: save_message(session_id, assistant_msg)
+    API-->>UI: SSE流式推送（操作描述逐字输出）
+    UI->>User: 显示执行结果 + AutoCAD截图刷新
+    User->>UI: 点击"满意"或输入修改意见
+    UI->>API: POST /api/feedback {command_id, rating, content}
+
+%% 流程 B：图片识别流程
+
+sequenceDiagram
+    actor User as 用户
+    participant UI as React前端(FileUpload)
+    participant API as FastAPI(recognition.py)
+    participant PRE as Preprocessor
+    participant DET as Detector(YOLOv8)
+    participant POST as Postprocessor
+    participant SYM as SymbolLibrary(SQLite)
+    participant CTX as ContextManager
+
+    User->>UI: 上传图纸图片（PNG/JPG/PDF截图）
+    UI->>API: POST /api/recognize {session_id, image_base64}
+
+    API->>PRE: preprocess(image_bytes)
+    Note over PRE: 灰度化、去噪、对比度增强<br/>缩放到推理尺寸
+    PRE-->>API: preprocessed_image
+
+    API->>DET: detect(preprocessed_image)
+    Note over DET: YOLOv8 懒加载单例<br/>首次加载约3-8秒
+    DET-->>API: raw_detections [{bbox, class_id, confidence}]
+
+    API->>POST: postprocess(raw_detections, conf_threshold=0.5)
+    Note over POST: NMS去重、过滤低置信度<br/>bbox坐标还原
+    POST-->>API: filtered_detections
+
+    loop 每个检测到的图元
+        API->>SYM: map_class_to_symbol(class_id)
+        SYM-->>API: Symbol对象（名称、标准编号、描述）
+    end
+
+    API->>CTX: save_recognition_context(session_id, elements)
+    Note over CTX: 将识别结果存入会话上下文<br/>支持后续"以此为基础"指令
+
+    API-->>UI: RecognitionResult {elements, processing_time}
+    UI->>User: 展示识别结果列表（图元名称+位置+置信度）
+    User->>UI: 点击某图元查看详情 或 输入"以此为基础继续绘制"

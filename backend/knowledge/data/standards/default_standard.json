@@ -1,0 +1,149 @@
+{
+  "name": "国标GB/T 4728-2018电气简图",
+  "description": "中华人民共和国国家标准 GB/T 4728 系列 - 电气简图用图形符号绘图规范",
+  "version": "2018",
+  "text_style": "ELEC_STANDARD",
+  "text_height": 3.5,
+  "dim_style": "ELEC_DIM",
+  "title_block": {
+    "width": 420,
+    "height": 297,
+    "format": "A3",
+    "title_x": 230,
+    "title_y": 15,
+    "company_x": 300,
+    "company_y": 10,
+    "date_x": 350,
+    "date_y": 8,
+    "scale_x": 280,
+    "scale_y": 8
+  },
+  "layers": [
+    {
+      "layer_name": "ELEC-POWER",
+      "color_index": 2,
+      "linetype": "Continuous",
+      "lineweight": 0.5,
+      "description": "主电源线路，黄色粗线，用于主回路高压导线"
+    },
+    {
+      "layer_name": "ELEC-BUS",
+      "color_index": 1,
+      "linetype": "Continuous",
+      "lineweight": 0.7,
+      "description": "母线图层，红色加粗，表示汇流排和主母线"
+    },
+    {
+      "layer_name": "ELEC-WIRE",
+      "color_index": 7,
+      "linetype": "Continuous",
+      "lineweight": 0.25,
+      "description": "普通导线，白色细线，表示低压回路和控制回路连接"
+    },
+    {
+      "layer_name": "ELEC-CABLE",
+      "color_index": 3,
+      "linetype": "Continuous",
+      "lineweight": 0.35,
+      "description": "电力电缆，绿色，表示地下电缆或穿管电缆"
+    },
+    {
+      "layer_name": "ELEC-SYMBOL",
+      "color_index": 7,
+      "linetype": "Continuous",
+      "lineweight": 0.25,
+      "description": "电气符号默认图层，白色，用于放置各类电气图元"
+    },
+    {
+      "layer_name": "ELEC-PROTECT",
+      "color_index": 1,
+      "linetype": "Continuous",
+      "lineweight": 0.35,
+      "description": "保护元件图层，红色，包含断路器、熔断器、避雷器等保护设备"
+    },
+    {
+      "layer_name": "ELEC-SWITCH",
+      "color_index": 5,
+      "linetype": "Continuous",
+      "lineweight": 0.25,
+      "description": "开关元件图层，蓝色，包含隔离开关、接触器等开关设备"
+    },
+    {
+      "layer_name": "ELEC-TRANSFORMER",
+      "color_index": 4,
+      "linetype": "Continuous",
+      "lineweight": 0.35,
+      "description": "变压器图层，青色，包含电力变压器、互感器等磁性元件"
+    },
+    {
+      "layer_name": "ELEC-INSTRUMENT",
+      "color_index": 6,
+      "linetype": "Continuous",
+      "lineweight": 0.18,
+      "description": "仪表图层，品红色，包含电流表、电压表、功率表等测量仪器"
+    },
+    {
+      "layer_name": "ELEC-LOAD",
+      "color_index": 3,
+      "linetype": "Continuous",
+      "lineweight": 0.25,
+      "description": "负荷设备图层，绿色，包含电动机、电容器、电抗器等用电设备"
+    },
+    {
+      "layer_name": "ELEC-SOURCE",
+      "color_index": 2,
+      "linetype": "Continuous",
+      "lineweight": 0.35,
+      "description": "电源图层，黄色，包含发电机、整流器、蓄电池等电源设备"
+    },
+    {
+      "layer_name": "ELEC-GROUND",
+      "color_index": 52,
+      "linetype": "Continuous",
+      "lineweight": 0.18,
+      "description": "接地图层，暗绿色，包含保护接地、工作接地等接地符号"
+    },
+    {
+      "layer_name": "ELEC-EQUIP",
+      "color_index": 8,
+      "linetype": "Continuous",
+      "lineweight": 0.25,
+      "description": "成套设备图层，灰色，包含开关柜、配电箱等成套装置"
+    },
+    {
+      "layer_name": "ELEC-CTRL",
+      "color_index": 30,
+      "linetype": "Continuous",
+      "lineweight": 0.18,
+      "description": "控制回路图层，橙色，包含继电器、控制元件等二次回路"
+    },
+    {
+      "layer_name": "ELEC-TEXT",
+      "color_index": 7,
+      "linetype": "Continuous",
+      "lineweight": 0.0,
+      "description": "文字标注图层，白色，包含设备编号、技术参数等文字说明"
+    },
+    {
+      "layer_name": "ELEC-DIM",
+      "color_index": 8,
+      "linetype": "Continuous",
+      "lineweight": 0.0,
+      "description": "尺寸标注图层，灰色，包含距离、角度等尺寸标注"
+    },
+    {
+      "layer_name": "ELEC-BORDER",
+      "color_index": 7,
+      "linetype": "Continuous",
+      "lineweight": 0.7,
+      "description": "图框边框图层，白色粗线，包含图幅边框和标题栏"
+    },
+    {
+      "layer_name": "DEFPOINTS",
+      "color_index": 7,
+      "linetype": "Continuous",
+      "lineweight": 0.0,
+      "description": "AutoCAD 标注点图层（系统层，不打印）"
+    }
+  ]
+}
