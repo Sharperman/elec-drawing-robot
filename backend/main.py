@@ -43,7 +43,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # 3. 导入默认数据（图元符号库 + 规范）
     try:
-        from scripts.init_db import import_default_data
+        import sys as _sys
+        from pathlib import Path as _Path
+        _scripts_dir = str(_Path(__file__).parent.parent / "scripts")
+        if _scripts_dir not in _sys.path:
+            _sys.path.insert(0, _scripts_dir)
+        from init_db import import_default_data
         await import_default_data()
         logger.info("Default data imported")
     except Exception as e:

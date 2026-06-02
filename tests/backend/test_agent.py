@@ -10,22 +10,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 
 # ============================================================
-# Inject langchain stubs for APIs removed in langchain >= 1.0
-# (AgentExecutor / create_openai_tools_agent are now in langgraph-prebuilt)
-# This is required because draw_agent.py imports from langchain.agents which
-# no longer exports these names in langchain 1.x — see SOURCE BUG below.
+# Ensure langchain_classic provides AgentExecutor
+# (langchain 1.x removed these from langchain.agents; draw_agent
+#  now imports from langchain_classic.agents instead)
 # ============================================================
-
-def _patch_langchain_agents():
-    try:
-        import langchain.agents as _lca
-        if not hasattr(_lca, "AgentExecutor"):
-            _lca.AgentExecutor = MagicMock(name="AgentExecutor")
-            _lca.create_openai_tools_agent = MagicMock(name="create_openai_tools_agent")
-    except ImportError:
-        pass
-
-_patch_langchain_agents()
 
 
 # ============================================================

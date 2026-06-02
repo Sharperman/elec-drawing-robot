@@ -4,7 +4,7 @@ AgentExecutor + 5 个 Tool + Memory + 规范上下文注入
 """
 from typing import Optional, AsyncIterator
 
-from langchain.agents import AgentExecutor, create_openai_tools_agent
+from langchain_classic.agents import AgentExecutor, create_openai_tools_agent
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_openai import ChatOpenAI

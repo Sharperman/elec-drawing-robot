@@ -34,20 +34,8 @@ _inject_win32_stubs()
 
 
 # ============================================================
-# Inject langchain stubs (langchain 1.x removed AgentExecutor)
+# langchain_classic provides AgentExecutor (langchain 1.x compat)
 # ============================================================
-
-def _patch_langchain_agents() -> None:
-    try:
-        import langchain.agents as _lca
-        if not hasattr(_lca, "AgentExecutor"):
-            _lca.AgentExecutor = MagicMock(name="AgentExecutor")
-            _lca.create_openai_tools_agent = MagicMock(name="create_openai_tools_agent")
-    except ImportError:
-        pass
-
-
-_patch_langchain_agents()
 
 
 # ============================================================
