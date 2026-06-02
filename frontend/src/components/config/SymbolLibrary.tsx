@@ -9,7 +9,6 @@ import apiClient from '@/services/apiClient';
 import { Symbol as ElecSymbol } from '@/types';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
 import ConfirmDialog from '@/components/shared/ConfirmDialog';
-import Toast from '@/components/shared/Toast';
 import {
   MagnifyingGlassIcon,
   PlusIcon,
@@ -339,18 +338,26 @@ const SymbolLibrary: React.FC = () => {
   return (
     <div className="flex flex-col h-full bg-gray-950">
       {/* Toast */}
-      {toast && <Toast message={toast.message} type={toast.type} />}
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-sm ${
+          toast.type === 'success'
+            ? 'bg-green-900/80 border border-green-700 text-green-200'
+            : 'bg-red-900/80 border border-red-700 text-red-200'
+        }`}>
+          {toast.message}
+        </div>
+      )}
 
       {/* 删除确认 */}
       {deleteTarget && (
         <ConfirmDialog
+          isOpen={!!deleteTarget}
           title="删除图元"
-          description={`确定要删除图元「${deleteTarget.name}」吗？`}
+          message={`确定要删除图元「${deleteTarget.name}」吗？`}
           onConfirm={() => deleteMut.mutate(String(deleteTarget.id))}
           onCancel={() => setDeleteTarget(null)}
-          isLoading={deleteMut.isPending}
           confirmText="删除"
-          confirmVariant="danger"
+          variant="danger"
         />
       )}
 

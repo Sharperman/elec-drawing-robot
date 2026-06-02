@@ -3,13 +3,12 @@
  * 绘图规范配置页：规范模板列表、激活/停用、创建/编辑/删除
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '@/services/apiClient';
 import { DrawingStandard } from '@/types';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
 import ConfirmDialog from '@/components/shared/ConfirmDialog';
-import Toast from '@/components/shared/Toast';
 import LayerMapping from './LayerMapping';
 import {
   PlusIcon,
@@ -225,18 +224,26 @@ const StandardsConfig: React.FC = () => {
   return (
     <div className="flex flex-col h-full bg-gray-950 p-6 overflow-y-auto custom-scrollbar">
       {/* Toast */}
-      {toast && <Toast message={toast.message} type={toast.type} />}
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-sm ${
+          toast.type === 'success'
+            ? 'bg-green-900/80 border border-green-700 text-green-200'
+            : 'bg-red-900/80 border border-red-700 text-red-200'
+        }`}>
+          {toast.message}
+        </div>
+      )}
 
       {/* 删除确认弹窗 */}
       {deleteTarget && (
         <ConfirmDialog
+          isOpen={!!deleteTarget}
           title="删除规范"
-          description={`确定要删除规范「${deleteTarget.name}」吗？此操作不可撤销。`}
+          message={`确定要删除规范「${deleteTarget.name}」吗？此操作不可撤销。`}
           onConfirm={() => deleteMut.mutate(String(deleteTarget.id))}
           onCancel={() => setDeleteTarget(null)}
-          isLoading={deleteMut.isPending}
           confirmText="删除"
-          confirmVariant="danger"
+          variant="danger"
         />
       )}
 

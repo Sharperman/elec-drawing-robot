@@ -32,9 +32,32 @@ class InsertElementTool(BaseTool):
 
     name: str = "insert_element"
     description: str = (
-        "向 AutoCAD 当前图纸中插入电气图元（图块）。"
-        "输入图元 symbol_id（如 CB_3P=断路器，TR_2W=变压器）、坐标位置和设备编号。"
-        "返回图元 Handle，可用于后续的连接和标注操作。"
+        "向 AutoCAD 当前图纸中插入电气图元（图块）。\n"
+        "输入图元 symbol_id、坐标位置和设备编号。\n"
+        "返回图元 Handle，可用于后续的连接和标注操作。\n\n"
+        "## 可用图元符号列表（symbol_id）\n"
+        "- CB_3P: 三相断路器 (断路器、保护)\n"
+        "- DS_3P: 三相隔离开关 (隔离开关)\n"
+        "- TR_2W: 双绕组变压器 (变压器)\n"
+        "- BUS_3P: 三相母线 (汇流排)\n"
+        "- GND: 接地符号\n"
+        "- LA: 避雷器\n"
+        "- CT: 电流互感器\n"
+        "- VT: 电压互感器\n"
+        "- SWGR: 开关柜 (配电柜)\n"
+        "- CABLE: 电力电缆\n"
+        "- WIRE: 导线/连接线\n"
+        "- FUSE: 熔断器\n"
+        "- KM: 接触器\n"
+        "- MOTOR: 三相异步电动机\n"
+        "- GEN: 发电机\n"
+        "- RECT: 整流器\n"
+        "- BAT: 蓄电池组\n"
+        "- CAP: 电容器组\n"
+        "- REACT: 电抗器\n"
+        "- AMMETER: 电流表\n\n"
+        "注意：symbol_id 必须精确匹配上述列表中的值，区分大小写。"
+        "例如母线用 BUS_3P（不是 BUS），导线用 WIRE（不是 Line）。"
     )
     args_schema: Type[BaseModel] = InsertElementInput
 
@@ -81,29 +104,17 @@ class InsertElementTool(BaseTool):
                 db.close()
 
             # 执行插入（带事务）
+            # 注意：直接使用 create_simple_symbol 而非 insert_block，
+            # 因为预定义块在 AutoCAD 中不存在，insert_block 的 COM 失败会污染状态
             with AutoCADTransaction(f"insert_{symbol_id}") as txn:
-                try:
-                    handle = drawing_ops.insert_block(
-                        block_name=block_name,
-                        x=x,
-                        y=y,
-                        x_scale=scale,
-                        y_scale=scale,
-                        rotation=rotation,
-                        layer=target_layer,
-                        attributes=attributes,
-                    )
-                except RuntimeError as block_err:
-                    # 图块不存在时，自动使用简易符号 fallback
-                    logger.warning(f"Block '{block_name}' not found, using simple symbol fallback: {block_err}")
-                    handle = drawing_ops.create_simple_symbol(
-                        symbol_type=symbol_id,
-                        x=x,
-                        y=y,
-                        label=label,
-                        layer=target_layer,
-                    )
-                    label = None  # create_simple_symbol 已添加标注
+                handle = drawing_ops.create_simple_symbol(
+                    symbol_type=symbol_id,
+                    x=x,
+                    y=y,
+                    label=label,
+                    layer=target_layer,
+                )
+                label = None  # create_simple_symbol 已添加标注
 
                 # 添加设备编号标注
                 if label:

@@ -37,8 +37,6 @@ export class PythonBridge {
   private process: ChildProcess | null = null;
   private options: PythonBridgeOptions;
   private healthCheckInterval: NodeJS.Timeout | null = null;
-  private startupRetries: number = 0;
-  private readonly maxStartupRetries: number = 3;
   private readonly healthCheckIntervalMs: number = 10000;
   private readonly startupTimeoutMs: number = 30000;
 

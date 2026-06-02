@@ -70,7 +70,6 @@ class DrawingOps:
             pythoncom.CoInitialize()
             import win32com.client  # type: ignore
 
-            # 在当前线程重新获取 COM dispatch（避免跨线程 STA 冲突）
             from config import settings
             acad = win32com.client.GetActiveObject(settings.AUTOCAD_VERSION)
             doc = acad.ActiveDocument

@@ -1,5 +1,5 @@
 /**
- * useChat Hook - 发送指令、接收 SSE 流、确认执行
+ * useChat Hook - 发送指令、SSE 流、确认执行、重新生成、反馈
  */
 import { useCallback } from 'react';
 import toast from 'react-hot-toast';
@@ -20,6 +20,7 @@ export function useChat() {
     finishStreaming,
     setLoading,
     setError,
+    removeLastAssistantMessage,
     isLoading,
     isStreaming,
     streamingMessage,
@@ -28,9 +29,8 @@ export function useChat() {
 
   const { currentSessionId } = useSessionStore();
 
-  /**
-   * 加载会话历史消息
-   */
+  // ── 加载历史 ──
+
   const loadHistory = useCallback(async (sessionId: string) => {
     try {
       const resp = await apiClient.get<{ data: Message[] }>(
@@ -44,12 +44,8 @@ export function useChat() {
     }
   }, [setMessages]);
 
-  /**
-   * 发送消息（流式）
-   *
-   * @param message 用户消息文本
-   * @param imageData 可选图片 base64
-   */
+  // ── 发送消息（流式） ──
+
   const sendMessage = useCallback(async (
     message: string,
     imageData?: string,
@@ -96,18 +92,53 @@ export function useChat() {
     finishStreaming, setError,
   ]);
 
-  /**
-   * 停止流式输出
-   */
+  // ── 停止流式 ──
+
   const stopStreaming = useCallback(() => {
     sseClient.disconnect();
     const current = streamingMessage?.content ?? '';
     finishStreaming(current);
   }, [streamingMessage, finishStreaming]);
 
-  /**
-   * 确认执行 Agent 计划
-   */
+  // ── 重新生成 ──
+
+  const regenerateMessage = useCallback((_aiMessage: Message) => {
+    if (!currentSessionId) return;
+
+    // 删除最后一条 AI 消息
+    removeLastAssistantMessage(currentSessionId);
+
+    // 找到最后一条用户消息
+    const msgs = getMessages(currentSessionId);
+    const lastUserMsg = [...msgs].reverse().find(m => m.role === 'user');
+    if (lastUserMsg) {
+      // 用相同的用户消息重新发送
+      sendMessage(lastUserMsg.content, lastUserMsg.image_data);
+    }
+  }, [currentSessionId, removeLastAssistantMessage, getMessages, sendMessage]);
+
+  // ── 反馈 ──
+
+  const sendFeedback = useCallback(async (
+    messageId: number,
+    type: 'positive' | 'negative',
+  ) => {
+    if (!currentSessionId) return;
+
+    try {
+      await apiClient.post('/api/chat/feedback', {
+        session_id: currentSessionId,
+        message_id: messageId,
+        feedback_type: type,
+      });
+      toast.success(type === 'positive' ? '感谢反馈 👍' : '已记录，我们会改进');
+    } catch {
+      // 静默处理（feedback 接口可能尚未实现）
+    }
+  }, [currentSessionId]);
+
+  // ── 确认执行计划 ──
+
   const confirmPlan = useCallback(async (confirm: boolean) => {
     if (!currentSessionId) return;
 
@@ -139,6 +170,8 @@ export function useChat() {
     error,
     sendMessage,
     stopStreaming,
+    regenerateMessage,
+    sendFeedback,
     confirmPlan,
     loadHistory,
   };

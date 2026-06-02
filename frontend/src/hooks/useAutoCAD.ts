@@ -15,8 +15,6 @@ export function useAutoCAD() {
     pollingInterval,
     snapshotUrl,
     snapshotError,
-    isSnapshotLoading,
-    isLoadingSnapshot,
     setAutocadStatus,
     setPolling,
     setSnapshotUrl,
@@ -166,9 +164,17 @@ export function useAutoCAD() {
     }
   }, []);
 
-  // 组件挂载时初始检查状态
+  // 组件挂载时：先查状态，如果未连接则自动尝试连接
   useEffect(() => {
-    checkStatus();
+    const autoConnect = async () => {
+      const status = await checkStatus();
+      if (status && !status.connected) {
+        await connect();
+      } else if (status?.connected) {
+        setIsConnected(true);
+      }
+    };
+    autoConnect();
     return () => {
       stopPolling();
       stopSnapshotPolling();
@@ -189,7 +195,6 @@ export function useAutoCAD() {
     isPolling,
     snapshotUrl,
     snapshotError,
-    isLoadingSnapshot,
     checkStatus,
     connect,
     disconnect,

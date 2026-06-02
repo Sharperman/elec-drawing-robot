@@ -26,7 +26,8 @@ export function showToast(
   };
 
   return toast(message, {
-    icon: icons[type],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    icon: icons[type] as any,
     duration,
     style: {
       background: '#1e293b',

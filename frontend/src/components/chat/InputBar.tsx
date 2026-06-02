@@ -1,178 +1,171 @@
 /**
- * 输入栏组件
- * 文字输入 + 语音按钮（P1占位）+ 附件按钮 + 发送
+ * InputBar.tsx
+ * 输入栏：聚焦发光 + 流式进度条 + 发送按钮动画 + 快捷指令
  */
-import React, { useState, useRef, KeyboardEvent, useCallback } from 'react';
-import { Send, Paperclip, Mic, Square, X } from 'lucide-react';
+import React, { useState, useRef, useCallback, KeyboardEvent } from 'react';
 import { clsx } from 'clsx';
-
-import FileUpload from './FileUpload';
-import { useImageUpload } from '@/hooks/useImageUpload';
-import { useSessionStore } from '@/stores/sessionStore';
+import { Send, Square, Paperclip, Command } from 'lucide-react';
+import QuickCommandPanel from './QuickCommandPanel';
 
 interface InputBarProps {
   onSend: (message: string, imageData?: string) => void;
-  onStop?: () => void;
+  onStop: () => void;
   isLoading: boolean;
   isStreaming: boolean;
   disabled?: boolean;
 }
 
 const InputBar: React.FC<InputBarProps> = ({
-  onSend,
-  onStop,
-  isLoading,
-  isStreaming,
-  disabled = false,
+  onSend, onStop, isLoading, isStreaming, disabled,
 }) => {
-  const [inputText, setInputText] = useState('');
-  const [showUpload, setShowUpload] = useState(false);
+  const [input, setInput] = useState('');
+  const [focused, setFocused] = useState(false);
+  const [showCommands, setShowCommands] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { currentSessionId } = useSessionStore();
 
-  const { previewUrl, imageData, handleImageFile, clearImage, isUploading } =
-    useImageUpload(currentSessionId ?? undefined);
+  const canSend = input.trim().length > 0 && !isLoading && !disabled;
 
-  const canSend = inputText.trim().length > 0 || imageData != null;
-  const isBusy = isLoading || isStreaming || disabled;
+  // 自动调整高度
+  const adjustHeight = useCallback(() => {
+    const el = textareaRef.current;
+    if (el) {
+      el.style.height = 'auto';
+      el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+    }
+  }, []);
 
-  const handleSend = useCallback(() => {
-    if (!canSend || isBusy) return;
-
-    const message = inputText.trim();
-    const img = imageData ?? undefined;
-
-    onSend(message || '请分析上传的图片中的电气元件', img);
-    setInputText('');
-    clearImage();
-    setShowUpload(false);
-
-    // 重置 textarea 高度
+  const handleSend = () => {
+    if (!canSend) return;
+    onSend(input.trim());
+    setInput('');
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
-  }, [canSend, isBusy, inputText, imageData, onSend, clearImage]);
+    setShowCommands(false);
+  };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
+    if (e.key === 'Escape') {
+      setShowCommands(false);
+    }
   };
 
-  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInputText(e.target.value);
-    // 自动调整高度
-    const ta = e.target;
-    ta.style.height = 'auto';
-    ta.style.height = `${Math.min(ta.scrollHeight, 120)}px`;
+  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setInput(val);
+    adjustHeight();
+
+    // 检测快捷指令
+    if (val === '/' || val.endsWith('\n/')) {
+      setShowCommands(true);
+    } else if (!val.startsWith('/')) {
+      setShowCommands(false);
+    }
   };
 
-  const handleFileSelected = async (file: File) => {
-    await handleImageFile(file);
+  const handleCommandSelect = (command: string) => {
+    setInput(command + ' ');
+    setShowCommands(false);
+    textareaRef.current?.focus();
   };
 
   return (
-    <div className="border-t border-gray-700 bg-gray-900 px-3 pt-2 pb-3">
-      {/* 图片预览区（上传后显示） */}
-      {previewUrl && (
-        <div className="mb-2 pl-1">
-          <FileUpload
-            onFileSelected={handleFileSelected}
-            onClear={clearImage}
-            previewUrl={previewUrl}
-            isUploading={isUploading}
+    <div className="flex-shrink-0">
+      {/* 流式进度条 */}
+      {isStreaming && (
+        <div className="h-0.5 bg-gray-800">
+          <div className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500
+                          animate-pulse bg-[length:200%_100%]" />
+        </div>
+      )}
+
+      {/* 快捷指令面板 */}
+      {showCommands && (
+        <div className="px-3 pb-1">
+          <QuickCommandPanel
+            filter={input.slice(1)}
+            onSelect={handleCommandSelect}
+            onClose={() => setShowCommands(false)}
           />
         </div>
       )}
 
-      {/* 拖拽上传区（点击附件按钮后展开） */}
-      {showUpload && !previewUrl && (
-        <div className="mb-2">
-          <FileUpload
-            onFileSelected={handleFileSelected}
-            onClear={clearImage}
-            className="w-full"
-          />
-        </div>
-      )}
+      {/* 输入区域 */}
+      <div className={clsx(
+        'mx-3 mb-3 rounded-xl border transition-all duration-200',
+        'bg-gray-800/50 backdrop-blur-sm',
+        focused
+          ? 'border-blue-500/50 glow-blue'
+          : 'border-gray-700/50',
+      )}>
+        <div className="flex items-end gap-2 px-3 py-2">
+          {/* 附件按钮 */}
+          <button
+            className="p-1.5 rounded-lg text-gray-500 hover:text-gray-300 hover:bg-gray-700/50
+                       transition-colors flex-shrink-0 mb-0.5"
+            title="上传图纸截图"
+          >
+            <Paperclip className="w-4 h-4" />
+          </button>
 
-      {/* 输入区 */}
-      <div className="flex items-end gap-2">
-        {/* 附件按钮 */}
-        <button
-          onClick={() => setShowUpload((prev) => !prev)}
-          className={clsx(
-            'btn-ghost p-1.5 rounded-lg flex-shrink-0',
-            showUpload && 'bg-gray-700 text-blue-400'
-          )}
-          title="上传图片"
-          disabled={isBusy}
-        >
-          {showUpload ? <X className="w-4 h-4" /> : <Paperclip className="w-4 h-4" />}
-        </button>
-
-        {/* 文字输入 */}
-        <div className="flex-1 relative">
+          {/* 输入框 */}
           <textarea
             ref={textareaRef}
-            value={inputText}
-            onChange={handleTextareaChange}
+            value={input}
+            onChange={handleInput}
             onKeyDown={handleKeyDown}
-            placeholder={
-              disabled
-                ? '请先选择或创建会话...'
-                : isStreaming
-                ? 'AI 正在响应...'
-                : '输入绘图指令（Enter 发送，Shift+Enter 换行）'
-            }
-            disabled={isBusy && !isStreaming}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            placeholder={disabled ? '请先创建会话...' : '输入绘图指令，Enter 发送，Shift+Enter 换行...'}
             rows={1}
-            className={clsx(
-              'input-base resize-none pr-1 leading-5 transition-all min-h-[36px]',
-              (isBusy && !isStreaming) && 'opacity-50 cursor-not-allowed'
-            )}
+            disabled={disabled || isStreaming}
+            className="flex-1 bg-transparent resize-none text-sm text-gray-200
+                       placeholder-gray-600 outline-none py-1.5
+                       disabled:opacity-50 disabled:cursor-not-allowed
+                       min-h-[24px] max-h-[160px]"
           />
+
+          {/* 发送/停止按钮 */}
+          {isStreaming ? (
+            <button
+              onClick={onStop}
+              className="flex-shrink-0 p-2 rounded-lg bg-red-500/20 hover:bg-red-500/30
+                         text-red-400 transition-all active:scale-95"
+              title="停止生成"
+            >
+              <Square className="w-4 h-4" fill="currentColor" />
+            </button>
+          ) : (
+            <button
+              onClick={handleSend}
+              disabled={!canSend}
+              className={clsx(
+                'flex-shrink-0 p-2 rounded-lg transition-all active:scale-95',
+                canSend
+                  ? 'bg-blue-600 text-white hover:bg-blue-500 shadow-sm shadow-blue-500/25 animate-pulse'
+                  : 'bg-gray-700 text-gray-500 cursor-not-allowed',
+              )}
+              title="发送 (Enter)"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
-        {/* 语音按钮（P1 占位） */}
-        <button
-          className="btn-ghost p-1.5 rounded-lg flex-shrink-0 opacity-40 cursor-not-allowed"
-          title="语音输入（即将推出）"
-          disabled
-        >
-          <Mic className="w-4 h-4" />
-        </button>
-
-        {/* 发送/停止按钮 */}
-        {isStreaming ? (
-          <button
-            onClick={onStop}
-            className="btn bg-red-600 text-white hover:bg-red-700 p-2 rounded-lg flex-shrink-0"
-            title="停止生成"
-          >
-            <Square className="w-4 h-4" />
-          </button>
-        ) : (
-          <button
-            onClick={handleSend}
-            disabled={!canSend || isBusy}
-            className={clsx(
-              'p-2 rounded-lg flex-shrink-0 transition-colors',
-              canSend && !isBusy
-                ? 'bg-blue-600 text-white hover:bg-blue-700'
-                : 'bg-gray-700 text-gray-500 cursor-not-allowed'
-            )}
-            title="发送 (Enter)"
-          >
-            <Send className="w-4 h-4" />
-          </button>
-        )}
-      </div>
-
-      {/* 提示文字 */}
-      <div className="mt-1.5 text-xs text-gray-600 text-center">
-        AI 可能出错，请对 AutoCAD 操作结果进行确认
+        {/* 底部提示 */}
+        <div className="flex items-center justify-between px-3 pb-2">
+          <span className="text-[10px] text-gray-600 flex items-center gap-1">
+            <Command className="w-3 h-3" />
+            <span>输入 / 查看快捷指令</span>
+          </span>
+          {input.length > 0 && (
+            <span className="text-[10px] text-gray-600">{input.length} 字</span>
+          )}
+        </div>
       </div>
     </div>
   );

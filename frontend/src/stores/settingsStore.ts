@@ -36,7 +36,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>()(
     (set) => ({
       settings: defaultSettings,
       sidebarCollapsed: false,
-      previewCollapsed: false,
+      previewCollapsed: true,
 
       updateSettings: (partial) => {
         set((state) => ({

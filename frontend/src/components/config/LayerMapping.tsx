@@ -11,7 +11,6 @@ import {
   PencilSquareIcon,
   CheckIcon,
   XMarkIcon,
-  PlusIcon,
 } from '@heroicons/react/24/outline';
 
 // ─── 类型 ─────────────────────────────────────────────────────────────────────

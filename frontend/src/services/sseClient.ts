@@ -80,9 +80,9 @@ export class SSEClient {
    * 适合 POST 请求携带 body 的场景
    */
   async connectWithFetch(
-    sessionId: string,
-    message: string,
-    imageData: string | undefined,
+    _sessionId: string,
+    _message: string,
+    _imageData: string | undefined,
     options: SSEClientOptions
   ): Promise<void> {
     this.abortController = new AbortController();

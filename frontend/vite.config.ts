@@ -10,6 +10,10 @@ export default defineConfig({
     electron([
       {
         entry: 'electron/main.ts',
+        // 纯前端开发时不启动 Electron，仅构建主进程代码
+        onstart() {
+          // skip auto-start in dev
+        },
         vite: {
           build: {
             outDir: '../dist-electron',
@@ -21,8 +25,8 @@ export default defineConfig({
       },
       {
         entry: 'electron/preload.ts',
-        onstart(options) {
-          options.reload();
+        onstart() {
+          // skip auto-start in dev
         },
         vite: {
           build: {

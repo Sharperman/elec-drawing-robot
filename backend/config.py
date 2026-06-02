@@ -40,7 +40,13 @@ class Settings(BaseSettings):
     # ---- 服务器 ----
     PORT: int = Field(default=8765, description="FastAPI 监听端口")
     CORS_ORIGINS: List[str] = Field(
-        default=["http://localhost:5173", "http://localhost:8765", "null"],
+        default=[
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:8765",
+            "http://127.0.0.1:8765",
+            "null",
+        ],
         description="允许的跨域来源",
     )
 

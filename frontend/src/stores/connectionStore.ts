@@ -1,30 +1,27 @@
 /**
- * Connection Store - AutoCAD 连接状态
- * 扩展版：添加 isConnected/isConnecting/autocadVersion/activeDocument/connectionError
- * 以及 snapshot(base64)/isSnapshotLoading/snapshotError 供 AutoCADPreview 使用
+ * Connection Store - AutoCAD 连接状态 + 后端心跳
  */
 import { create } from 'zustand';
 import type { AutoCADStatus } from '@/types';
 
 interface ConnectionState {
-  // ── 原有字段（兼容 useAutoCAD hook） ───────────────────────────
   autocadStatus: AutoCADStatus;
   isPolling: boolean;
-  pollingInterval: number; // 毫秒
+  pollingInterval: number;
 
-  // ── 派生便捷字段（供 StatusBar / AutoCADPreview 直接使用） ─────
   isConnected: boolean;
   isConnecting: boolean;
   autocadVersion: string | null;
   activeDocument: string | null;
   connectionError: string | null;
 
-  // ── 截图（base64 字符串，供 AutoCADPreview 使用） ──────────────
+  // 后端心跳
+  backendOnline: boolean;
+
+  // 截图
   snapshot: string | null;
   isSnapshotLoading: boolean;
   snapshotError: string | null;
-
-  // ── 兼容旧字段（保留，部分 hook 可能引用） ─────────────────────
   snapshotUrl: string | null;
 }
 
@@ -32,20 +29,15 @@ interface ConnectionActions {
   setAutocadStatus: (status: AutoCADStatus) => void;
   setPolling: (polling: boolean) => void;
   setPollingInterval: (interval: number) => void;
-
-  // 派生便捷字段
   setIsConnected: (connected: boolean) => void;
   setIsConnecting: (connecting: boolean) => void;
   setAutocadVersion: (version: string | null) => void;
   setActiveDocument: (doc: string | null) => void;
   setConnectionError: (error: string | null) => void;
-
-  // 截图
+  setBackendOnline: (online: boolean) => void;
   setSnapshot: (data: string | null) => void;
   setSnapshotLoading: (loading: boolean) => void;
   setSnapshotError: (error: string | null) => void;
-
-  // 旧接口保留
   setSnapshotUrl: (url: string | null) => void;
   setLoadingSnapshot: (loading: boolean) => void;
 }
@@ -60,7 +52,6 @@ const defaultStatus: AutoCADStatus = {
 };
 
 export const useConnectionStore = create<ConnectionState & ConnectionActions>()((set) => ({
-  // 初始值
   autocadStatus: defaultStatus,
   isPolling: false,
   pollingInterval: 10000,
@@ -71,14 +62,12 @@ export const useConnectionStore = create<ConnectionState & ConnectionActions>()(
   activeDocument: null,
   connectionError: null,
 
+  backendOnline: false,
+
   snapshot: null,
   isSnapshotLoading: false,
   snapshotError: null,
-
-  // 旧字段保留
   snapshotUrl: null,
-
-  // ── Actions ─────────────────────────────────────────────────────────────
 
   setAutocadStatus: (status) => {
     set({
@@ -99,11 +88,12 @@ export const useConnectionStore = create<ConnectionState & ConnectionActions>()(
   setActiveDocument: (doc) => set({ activeDocument: doc }),
   setConnectionError: (error) => set({ connectionError: error }),
 
+  setBackendOnline: (online) => set({ backendOnline: online }),
+
   setSnapshot: (data) => set({ snapshot: data }),
   setSnapshotLoading: (loading) => set({ isSnapshotLoading: loading }),
   setSnapshotError: (error) => set({ snapshotError: error }),
 
-  // 旧接口
   setSnapshotUrl: (url) => set({ snapshotUrl: url }),
   setLoadingSnapshot: (loading) => set({ isSnapshotLoading: loading }),
 }));

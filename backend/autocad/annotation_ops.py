@@ -51,10 +51,12 @@ class AnnotationOps:
                 [x, y, z],
             )
 
-            text_obj = model_space.AddMText(insertion_point, 0, text)
-            text_obj.CharHeight = height
+            # 使用 AddText（单行文字），高度作为构造参数直接传入
+            # 避免 AddMText + CharHeight 在 COM STA 异常时出现 "can not be set" 错误
+            text_obj = model_space.AddText(text, insertion_point, height)
             text_obj.Layer = layer
-            text_obj.Rotation = rotation
+            if rotation != 0.0:
+                text_obj.Rotation = rotation
 
             doc.Regen(0)
 
@@ -182,8 +184,7 @@ class AnnotationOps:
                 win32com.client.pythoncom.VT_ARRAY | win32com.client.pythoncom.VT_R8,
                 [end_x + 1, end_y, 0.0],
             )
-            text_obj = model_space.AddMText(text_point, 0, text)
-            text_obj.CharHeight = text_height
+            text_obj = model_space.AddText(text, text_point, text_height)
             text_obj.Layer = layer
 
             doc.Regen(0)

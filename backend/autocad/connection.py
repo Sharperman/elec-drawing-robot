@@ -184,7 +184,12 @@ class AutoCADConnection:
             )
 
     def _heartbeat_loop(self) -> None:
-        """心跳检测线程：定期检查 AutoCAD 连接状态"""
+        """心跳检测线程：定期检查 AutoCAD 连接状态
+        
+        注意：心跳线程运行在独立线程中，必须重新 GetActiveObject 获取
+        当前线程的 COM dispatch，不能使用 connect() 线程中的 self._acad，
+        否则会违反 COM STA 规则导致 "未找到主键" 等错误。
+        """
         from config import settings
         interval = settings.AUTOCAD_RECONNECT_INTERVAL
 
@@ -192,10 +197,14 @@ class AutoCADConnection:
             if not self._is_connected:
                 break
             try:
-                # 尝试访问 AutoCAD 版本号验证连接存活
-                _ = self._acad.Version
-            except Exception:
-                logger.warning("AutoCAD heartbeat failed, marking disconnected")
+                # 在当前线程重新获取 COM dispatch（避免跨线程 STA 冲突）
+                import pythoncom
+                pythoncom.CoInitialize()
+                import win32com.client
+                acad = win32com.client.GetActiveObject(settings.AUTOCAD_VERSION)
+                _ = acad.Version  # 验证连接存活
+            except Exception as e:
+                logger.warning(f"AutoCAD heartbeat failed, marking disconnected: {e}")
                 self._is_connected = False
                 break
 

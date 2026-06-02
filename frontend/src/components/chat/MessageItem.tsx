@@ -1,159 +1,223 @@
 /**
- * 单条消息组件
- * 支持 Markdown 渲染 + 流式文字光标
+ * MessageItem.tsx
+ * 单条消息渲染：用户气泡 / AI 卡片 / 系统消息 / 工具调用
+ * 升级版：毛玻璃 AI 气泡、渐变头像、弹性动画
  */
-import React from 'react';
+import React, { useState, useDeferredValue } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { clsx } from 'clsx';
-import { User, Bot } from 'lucide-react';
+import { User, Bot, Copy, RefreshCw, ThumbsUp, ThumbsDown, Wrench, ChevronDown, ChevronUp } from 'lucide-react';
 import type { Message } from '@/types';
+import CodeBlock from './CodeBlock';
+
+// ─── 工具调用解析 ──────────────────────────────────────────────
+
+interface ToolCall {
+  tool: string;
+  input: Record<string, unknown>;
+  output?: string;
+}
+
+function parseToolCalls(toolCallsStr?: string): ToolCall[] {
+  if (!toolCallsStr) return [];
+  try {
+    const parsed = JSON.parse(toolCallsStr);
+    return Array.isArray(parsed) ? parsed : [parsed];
+  } catch {
+    return [];
+  }
+}
+
+// ─── 消息操作栏 ────────────────────────────────────────────────
+
+const MessageActions: React.FC<{
+  onCopy: () => void;
+  onRegenerate?: () => void;
+  onFeedback?: (type: 'positive' | 'negative') => void;
+  copied: boolean;
+}> = ({ onCopy, onRegenerate, onFeedback, copied }) => (
+  <div className="msg-actions">
+    <button onClick={onCopy} title={copied ? '已复制' : '复制'}>
+      {copied ? (
+        <span className="text-green-400 text-xs">✓</span>
+      ) : (
+        <Copy className="w-3.5 h-3.5" />
+      )}
+    </button>
+    {onRegenerate && (
+      <button onClick={onRegenerate} title="重新生成">
+        <RefreshCw className="w-3.5 h-3.5" />
+      </button>
+    )}
+    {onFeedback && (
+      <>
+        <button onClick={() => onFeedback('positive')} title="有帮助">
+          <ThumbsUp className="w-3.5 h-3.5" />
+        </button>
+        <button onClick={() => onFeedback('negative')} title="无帮助">
+          <ThumbsDown className="w-3.5 h-3.5" />
+        </button>
+      </>
+    )}
+  </div>
+);
+
+// ─── 主组件 ────────────────────────────────────────────────────
 
 interface MessageItemProps {
   message: Message;
+  isGrouped: boolean;
+  isFirstInGroup: boolean;
+  onRegenerate?: () => void;
+  onFeedback?: (type: 'positive' | 'negative') => void;
 }
 
-const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
-  const isUser = message.role === 'user';
-  const isStreaming = message.is_streaming;
+const MessageItem: React.FC<MessageItemProps> = ({
+  message, isGrouped, isFirstInGroup,
+  onRegenerate, onFeedback,
+}) => {
+  const [hovered, setHovered] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [toolExpanded, setToolExpanded] = useState(false);
+
+  // 流式渲染时降低更新频率
+  const deferredContent = useDeferredValue(message.content);
+
+  const { role, is_streaming, tool_calls } = message;
+  const toolCalls = parseToolCalls(tool_calls);
+  const hasToolCalls = toolCalls.length > 0;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(message.content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // 系统消息
+  if (role === 'system') {
+    return (
+      <div className="msg-system">
+        <div className="msg-system-badge">
+          {deferredContent}
+        </div>
+      </div>
+    );
+  }
+
+  const isUser = role === 'user';
+  const showAvatar = isFirstInGroup && !isUser;
 
   return (
     <div
       className={clsx(
-        'flex items-start gap-2.5 py-1.5 animate-fade-in',
-        isUser ? 'flex-row-reverse' : 'flex-row'
+        'flex gap-3 px-1',
+        isUser ? 'justify-end' : 'justify-start',
+        isGrouped ? 'msg-grouped' : 'msg-first',
+        !is_streaming && 'msg-animate-in',
       )}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
-      {/* 头像 */}
-      <div
-        className={clsx(
-          'w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5',
-          isUser
-            ? 'bg-blue-600/30 border border-blue-500/40'
-            : 'bg-purple-600/20 border border-purple-500/30'
-        )}
-      >
-        {isUser ? (
-          <User className="w-3.5 h-3.5 text-blue-400" />
-        ) : (
-          <Bot className="w-3.5 h-3.5 text-purple-400" />
-        )}
-      </div>
+      {/* AI 头像 */}
+      {showAvatar && (
+        <div className="avatar-ai flex-shrink-0 mt-0.5">
+          <Bot className="w-4 h-4 text-white" />
+        </div>
+      )}
+      {!showAvatar && !isUser && (
+        <div className="w-[34px] flex-shrink-0" />
+      )}
 
-      {/* 消息气泡 */}
-      <div
-        className={clsx(
-          'max-w-[85%] rounded-xl px-3.5 py-2.5 text-sm',
-          isUser
-            ? 'bg-blue-600 text-white rounded-tr-sm'
-            : 'bg-gray-800 border border-gray-700 text-gray-100 rounded-tl-sm'
-        )}
-      >
-        {/* 图片预览 */}
-        {message.image_data && (
-          <div className="mb-2">
-            <img
-              src={message.image_data}
-              alt="上传的图片"
-              className="max-w-full max-h-48 rounded-lg object-contain"
-            />
-          </div>
-        )}
-
-        {/* 文字内容 */}
-        {isUser ? (
-          <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
-        ) : (
-          <div className={clsx('prose-chat', { 'streaming-cursor': isStreaming })}>
+      {/* 气泡内容 */}
+      <div className={clsx(
+        'max-w-[80%] min-w-0',
+        isUser ? 'order-1' : 'order-2',
+      )}>
+        <div className={clsx(
+          'px-4 py-2.5',
+          isUser ? 'bubble-user' : 'bubble-ai',
+          is_streaming && 'streaming-cursor',
+        )}>
+          {/* Markdown 渲染 */}
+          <div className="prose-chat selectable break-words">
             <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
               components={{
-                // 代码块处理
                 code({ className, children, ...props }) {
-                  const isInline = !className;
-                  return isInline ? (
-                    <code className="px-1 py-0.5 rounded bg-gray-700 text-blue-300 font-mono text-xs" {...props}>
+                  const match = /language-(\w+)/.exec(className || '');
+                  const codeStr = String(children).replace(/\n$/, '');
+                  if (match) {
+                    return <CodeBlock language={match[1]} code={codeStr} />;
+                  }
+                  return (
+                    <code className={className} {...props}>
                       {children}
                     </code>
-                  ) : (
-                    <pre className="p-3 rounded-md bg-gray-900 overflow-x-auto mb-2">
-                      <code className="text-gray-300 font-mono text-xs">{children}</code>
-                    </pre>
                   );
-                },
-                // 段落处理
-                p({ children }) {
-                  return <p className="mb-1.5 last:mb-0 leading-relaxed">{children}</p>;
-                },
-                // 列表处理
-                ul({ children }) {
-                  return <ul className="pl-4 mb-2 space-y-0.5 list-disc">{children}</ul>;
-                },
-                ol({ children }) {
-                  return <ol className="pl-4 mb-2 space-y-0.5 list-decimal">{children}</ol>;
-                },
-                // 强调
-                strong({ children }) {
-                  return <strong className="font-semibold text-gray-50">{children}</strong>;
                 },
               }}
             >
-              {message.content}
+              {deferredContent || (is_streaming ? '' : '...')}
             </ReactMarkdown>
           </div>
-        )}
 
-        {/* 工具调用展示 */}
-        {message.tool_calls && !isUser && (
-          <ToolCallsPreview toolCallsJson={message.tool_calls} />
-        )}
-
-        {/* 时间戳 */}
-        <div
-          className={clsx(
-            'mt-1 text-xs opacity-50',
-            isUser ? 'text-right' : 'text-left'
+          {/* 工具调用 */}
+          {hasToolCalls && (
+            <div className="mt-2 space-y-1.5">
+              {toolCalls.map((tc, idx) => (
+                <div key={idx} className="tool-call-card">
+                  <div
+                    className="tool-call-header"
+                    onClick={() => setToolExpanded(!toolExpanded)}
+                  >
+                    <Wrench className="w-3.5 h-3.5" />
+                    <span className="flex-1 font-medium">{tc.tool}</span>
+                    {toolExpanded
+                      ? <ChevronUp className="w-3.5 h-3.5" />
+                      : <ChevronDown className="w-3.5 h-3.5" />
+                    }
+                  </div>
+                  {toolExpanded && (
+                    <div className="tool-call-body">
+                      {JSON.stringify(tc.input, null, 2)}
+                      {tc.output && (
+                        <>
+                          {'\n\n→ '}{tc.output}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
-        >
-          {formatTime(message.created_at)}
         </div>
+
+        {/* 操作栏 */}
+        {hovered && !is_streaming && (
+          <div className={clsx(
+            'flex mt-1',
+            isUser ? 'justify-end' : 'justify-start',
+          )}>
+            <MessageActions
+              onCopy={handleCopy}
+              onRegenerate={!isUser ? onRegenerate : undefined}
+              onFeedback={!isUser ? onFeedback : undefined}
+              copied={copied}
+            />
+          </div>
+        )}
       </div>
-    </div>
-  );
-};
 
-// 工具调用预览
-const ToolCallsPreview: React.FC<{ toolCallsJson: string }> = ({ toolCallsJson }) => {
-  let calls: Array<{ tool: string; result?: string }> = [];
-  try {
-    calls = JSON.parse(toolCallsJson);
-  } catch (_) {
-    return null;
-  }
-
-  return (
-    <div className="mt-2 border-t border-gray-700/50 pt-2 space-y-1">
-      {calls.map((call, i) => (
-        <div key={i} className="text-xs text-gray-500 flex items-center gap-1">
-          <span className="text-blue-400">🔧</span>
-          <span className="font-mono">{call.tool}</span>
-          {call.result && (
-            <span className="text-green-400 truncate">→ {call.result.slice(0, 50)}</span>
-          )}
+      {/* 用户头像 */}
+      {isUser && (
+        <div className="avatar-user flex-shrink-0 order-2 mt-0.5">
+          <User className="w-4 h-4 text-white" />
         </div>
-      ))}
+      )}
     </div>
   );
 };
 
-function formatTime(isoString: string): string {
-  try {
-    const date = new Date(isoString);
-    return date.toLocaleTimeString('zh-CN', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch (_) {
-    return '';
-  }
-}
-
-export default MessageItem;
+export default React.memo(MessageItem);
