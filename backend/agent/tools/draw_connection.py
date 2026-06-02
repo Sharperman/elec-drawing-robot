@@ -2,6 +2,7 @@
 DrawConnection Tool
 连接两个图元，绘制母线或导线
 """
+import json
 from typing import Optional, Type
 
 from langchain_core.tools import BaseTool
@@ -22,9 +23,9 @@ class DrawConnectionInput(BaseModel):
         None,
         description="连线图层，不填则根据 line_type 自动选择"
     )
-    via_points: Optional[list[list[float]]] = Field(
+    via_points: Optional[str] = Field(
         None,
-        description="折线途径点列表，如 [[x1,y1],[x2,y2]]"
+        description="折线途径点列表，JSON 字符串如 [[x1,y1],[x2,y2]]"
     )
 
 
@@ -57,62 +58,62 @@ class DrawConnectionTool(BaseTool):
         to_handle: str,
         line_type: str = "wire",
         layer: Optional[str] = None,
-        via_points: Optional[list[list[float]]] = None,
+        via_points: Optional[str] = None,
     ) -> str:
         """执行连线操作"""
-        try:
-            from autocad.connection import autocad_connection
-            from autocad.drawing_ops import drawing_ops
-            from autocad.layer_manager import layer_manager
-            from autocad.transaction import AutoCADTransaction
+        import pythoncom
+        pythoncom.CoInitialize()
 
-            doc = autocad_connection.doc
+        try:
+            import win32com.client
+            from config import settings
+
+            # 在当前线程获取 COM dispatch（不用心跳线程的 doc，避免跨线程 HandleToObject 失败）
+            acad = win32com.client.GetActiveObject(settings.AUTOCAD_VERSION)
+            doc = acad.ActiveDocument
+            ms = doc.ModelSpace
+
             target_layer = layer or self._LINE_LAYER_MAP.get(line_type, "ELEC-WIRE")
 
-            # 确保图层存在
-            layer_manager.ensure_layer(target_layer)
+            # 在当前 COM 会话中确保图层存在
+            _ensure_layer_in_session(doc, target_layer)
+
+            # 解析 via_points
+            parsed_via: list[list[float]] = []
+            if via_points:
+                try:
+                    parsed_via = json.loads(via_points)
+                    if not isinstance(parsed_via, list):
+                        parsed_via = []
+                except (json.JSONDecodeError, TypeError):
+                    return f"错误：via_points 格式无效，应为 JSON 数组如 [[x1,y1],[x2,y2]]，收到: {via_points}"
 
             # 获取起点图元的坐标
-            from_entity = doc.HandleToObject(from_handle)
-            to_entity = doc.HandleToObject(to_handle)
+            try:
+                from_entity = doc.HandleToObject(from_handle)
+                from_x, from_y = _get_entity_center(from_entity)
+            except Exception as e:
+                return f"错误：无法获取图元 {from_handle} 的位置: {e}"
 
             try:
-                from_pt = from_entity.InsertionPoint
-                from_x, from_y = float(from_pt[0]), float(from_pt[1])
-            except Exception:
-                return f"错误：无法获取图元 {from_handle} 的位置"
+                to_entity = doc.HandleToObject(to_handle)
+                to_x, to_y = _get_entity_center(to_entity)
+            except Exception as e:
+                return f"错误：无法获取图元 {to_handle} 的位置: {e}"
 
-            try:
-                to_pt = to_entity.InsertionPoint
-                to_x, to_y = float(to_pt[0]), float(to_pt[1])
-            except Exception:
-                return f"错误：无法获取图元 {to_handle} 的位置"
+            # 绘制连线（不用 AutoCADTransaction，避免跨线程 Undo 标记问题）
+            import win32com.client as wc
+            handles: list[str] = []
 
-            # 绘制连线
-            with AutoCADTransaction(f"connect_{from_handle}_{to_handle}") as txn:
-                handles: list[str] = []
-
-                if via_points:
-                    # 绘制折线（通过中间点）
-                    all_points = [[from_x, from_y]] + via_points + [[to_x, to_y]]
-                    for i in range(len(all_points) - 1):
-                        p1, p2 = all_points[i], all_points[i + 1]
-                        h = drawing_ops.draw_line(
-                            x1=p1[0], y1=p1[1],
-                            x2=p2[0], y2=p2[1],
-                            layer=target_layer,
-                        )
-                        handles.append(h)
-                else:
-                    # 直线连接
-                    h = drawing_ops.draw_line(
-                        x1=from_x, y1=from_y,
-                        x2=to_x, y2=to_y,
-                        layer=target_layer,
-                    )
+            if parsed_via:
+                all_points = [[from_x, from_y]] + parsed_via + [[to_x, to_y]]
+                for i in range(len(all_points) - 1):
+                    p1, p2 = all_points[i], all_points[i + 1]
+                    h = _draw_line_segment(ms, p1[0], p1[1], p2[0], p2[1], target_layer)
                     handles.append(h)
-
-                txn.commit()
+            else:
+                h = _draw_line_segment(ms, from_x, from_y, to_x, to_y, target_layer)
+                handles.append(h)
 
             logger.info(
                 f"DrawConnection success: {from_handle} -> {to_handle} "
@@ -136,3 +137,44 @@ class DrawConnectionTool(BaseTool):
         import asyncio
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, lambda: self._run(**kwargs))
+
+
+def _ensure_layer_in_session(doc, layer_name: str) -> None:
+    """在当前 COM 会话中确保图层存在"""
+    layers = doc.Layers
+    for i in range(layers.Count):
+        if layers.Item(i).Name.upper() == layer_name.upper():
+            return
+    try:
+        new_layer = layers.Add(layer_name)
+        new_layer.Color = 7
+    except Exception as e:
+        logger.warning(f"Failed to create layer {layer_name}: {e}")
+
+
+def _get_entity_center(entity) -> tuple[float, float]:
+    """获取 AutoCAD 实体的中心坐标，兼容 BlockRef(InsertionPoint) 和 Polyline(GetBoundingBox)"""
+    try:
+        pt = entity.InsertionPoint
+        return float(pt[0]), float(pt[1])
+    except Exception:
+        pass
+    try:
+        min_pt = entity.GetBoundingBox(None, None)[0]
+        max_pt = entity.GetBoundingBox(None, None)[1]
+        return (float(min_pt[0]) + float(max_pt[0])) / 2, (float(min_pt[1]) + float(max_pt[1])) / 2
+    except Exception:
+        pass
+    raise RuntimeError(f"Cannot get position for {entity.ObjectName}")
+
+
+def _draw_line_segment(ms, x1: float, y1: float, x2: float, y2: float, layer: str) -> str:
+    """在当前 COM 会话中绘制一条直线段，返回 Handle"""
+    import pythoncom
+    import win32com.client
+
+    p1 = win32com.client.VARIANT(pythoncom.VT_ARRAY | pythoncom.VT_R8, [x1, y1, 0.0])
+    p2 = win32com.client.VARIANT(pythoncom.VT_ARRAY | pythoncom.VT_R8, [x2, y2, 0.0])
+    line = ms.AddLine(p1, p2)
+    line.Layer = layer
+    return line.Handle

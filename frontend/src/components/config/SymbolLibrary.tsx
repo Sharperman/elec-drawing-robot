@@ -23,7 +23,8 @@ import {
 const fetchSymbols = async (search?: string): Promise<ElecSymbol[]> => {
   const params = search ? { search } : {};
   const res = await apiClient.get('/api/symbols', { params });
-  return res.data.data ?? [];
+  // 后端返回 {total, page, page_size, items}，取 items 字段
+  return res.data.data?.items ?? [];
 };
 
 const createSymbol = async (data: Partial<ElecSymbol>): Promise<ElecSymbol> => {

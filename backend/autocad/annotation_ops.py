@@ -7,6 +7,20 @@ from autocad.connection import autocad_connection
 from autocad.retry import retry_on_com_error
 
 
+def _ensure_layer_in_session(doc, layer_name: str) -> None:
+    """在当前 COM 会话的 doc 中确保图层存在"""
+    layers = doc.Layers
+    for i in range(layers.Count):
+        if layers.Item(i).Name.upper() == layer_name.upper():
+            return
+    try:
+        new_layer = layers.Add(layer_name)
+        new_layer.Color = 7
+        logger.debug(f"Layer created in session: {layer_name}")
+    except Exception as e:
+        logger.warning(f"Failed to create layer {layer_name}: {e}")
+
+
 class AnnotationOps:
     """AutoCAD 标注操作类"""
 
@@ -45,6 +59,9 @@ class AnnotationOps:
             acad = win32com.client.GetActiveObject(settings.AUTOCAD_VERSION)
             doc = acad.ActiveDocument
             model_space = doc.ModelSpace
+
+            # 确保目标图层在当前 COM 会话中存在
+            _ensure_layer_in_session(doc, layer)
 
             insertion_point = win32com.client.VARIANT(
                 win32com.client.pythoncom.VT_ARRAY | win32com.client.pythoncom.VT_R8,

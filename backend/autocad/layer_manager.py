@@ -81,7 +81,14 @@ class LayerManager:
                 # 创建新图层
                 new_layer = layers.Add(layer_name)
                 new_layer.Color = color_index
-                new_layer.Lineweight = LINEWEIGHT_MAP.get(lineweight, 6)  # 6=0.25mm
+                # 线宽设置：acLnWtByLayer = -1, acLnWtByBlock = -2, acLnWtDefault = -3
+                # 某些 AutoCAD 版本对整数线宽值有严格校验，先尝试设置，失败则用 ByLayer
+                lw_val = LINEWEIGHT_MAP.get(lineweight, -3)
+                try:
+                    new_layer.Lineweight = lw_val
+                except Exception:
+                    new_layer.Lineweight = -3  # acLnWtByLayer
+                    logger.debug(f"Layer {layer_name}: Lineweight fallback to ByLayer")
                 self._load_linetype(linetype)
                 new_layer.Linetype = linetype
                 logger.info(

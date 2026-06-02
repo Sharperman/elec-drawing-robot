@@ -59,10 +59,18 @@ class ModifyElementTool(BaseTool):
         target_name: Optional[str] = None,
     ) -> str:
         """执行修改操作"""
+        import pythoncom
+        pythoncom.CoInitialize()
+
         try:
-            from autocad.connection import autocad_connection
+            import win32com.client
+            from config import settings
             from autocad.layer_manager import layer_manager
             from autocad.drawing_ops import drawing_ops
+
+            # 在当前线程获取 COM dispatch
+            acad = win32com.client.GetActiveObject(settings.AUTOCAD_VERSION)
+            doc = acad.ActiveDocument
 
             changed_items: list[str] = []
 
@@ -77,11 +85,13 @@ class ModifyElementTool(BaseTool):
                     changed_items.append(f"线型={properties['linetype']}")
 
                 if "lineweight" in properties:
-                    doc = autocad_connection.doc
                     from autocad.layer_manager import LINEWEIGHT_MAP
                     lw = float(properties["lineweight"])
-                    layer = doc.Layers.Item(target_name)
-                    layer.Lineweight = LINEWEIGHT_MAP.get(lw, 6)
+                    try:
+                        layer = doc.Layers.Item(target_name)
+                        layer.Lineweight = LINEWEIGHT_MAP.get(lw, -3)
+                    except Exception:
+                        pass
                     changed_items.append(f"线宽={lw}mm")
 
                 result = f"图层 {target_name} 已修改: {', '.join(changed_items)}"
@@ -90,7 +100,6 @@ class ModifyElementTool(BaseTool):
 
             elif handle:
                 # 修改图元属性
-                doc = autocad_connection.doc
                 entity = doc.HandleToObject(handle)
 
                 if "layer" in properties:
@@ -99,13 +108,15 @@ class ModifyElementTool(BaseTool):
 
                 if "x" in properties or "y" in properties:
                     try:
-                        current_pt = entity.InsertionPoint
-                        new_x = float(properties.get("x", current_pt[0]))
-                        new_y = float(properties.get("y", current_pt[1]))
+                        # 用 GetBoundingBox 计算中心（兼容 Polyline 等无 InsertionPoint 的实体）
+                        current_pt = _get_entity_center(entity)
+                        current_x, current_y = current_pt[0], current_pt[1]
+                        new_x = float(properties.get("x", current_x))
+                        new_y = float(properties.get("y", current_y))
                         drawing_ops.move_entity(
                             handle=handle,
-                            from_x=float(current_pt[0]),
-                            from_y=float(current_pt[1]),
+                            from_x=current_x,
+                            from_y=current_y,
                             to_x=new_x,
                             to_y=new_y,
                         )
@@ -146,3 +157,19 @@ class ModifyElementTool(BaseTool):
         import asyncio
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, lambda: self._run(**kwargs))
+
+
+def _get_entity_center(entity) -> tuple[float, float]:
+    """获取 AutoCAD 实体的中心坐标，兼容 BlockRef(InsertionPoint) 和 Polyline(GetBoundingBox)"""
+    try:
+        pt = entity.InsertionPoint
+        return float(pt[0]), float(pt[1])
+    except Exception:
+        pass
+    try:
+        min_pt = entity.GetBoundingBox(None, None)[0]
+        max_pt = entity.GetBoundingBox(None, None)[1]
+        return (float(min_pt[0]) + float(max_pt[0])) / 2, (float(min_pt[1]) + float(max_pt[1])) / 2
+    except Exception:
+        pass
+    raise RuntimeError(f"Cannot get position for {entity.ObjectName}")

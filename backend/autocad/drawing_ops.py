@@ -10,6 +10,23 @@ from autocad.connection import autocad_connection
 from autocad.retry import retry_on_com_error
 
 
+def _ensure_layer_in_session(doc, layer_name: str) -> None:
+    """在当前 COM 会话的 doc 中确保图层存在"""
+    layers = doc.Layers
+    exists = False
+    for i in range(layers.Count):
+        if layers.Item(i).Name.upper() == layer_name.upper():
+            exists = True
+            break
+    if not exists:
+        try:
+            new_layer = layers.Add(layer_name)
+            new_layer.Color = 7  # white/black
+            logger.debug(f"Layer created in session: {layer_name}")
+        except Exception as e:
+            logger.warning(f"Failed to create layer {layer_name} in session: {e}")
+
+
 def _get_com_objects():
     """
     在当前线程获取 AutoCAD COM 对象（避免跨线程 STA 冲突）
@@ -331,6 +348,10 @@ class DrawingOps:
         acad = win32com.client.GetActiveObject(settings.AUTOCAD_VERSION)
         doc = acad.ActiveDocument
         ms = doc.ModelSpace
+
+        # 确保图层存在（在当前 COM 会话中，避免跨会话图层不同步）
+        _ensure_layer_in_session(doc, layer)
+        _ensure_layer_in_session(doc, "ELEC-TEXT")
 
         handle = ""
         w, h = 10.0, 10.0  # 默认符号尺寸

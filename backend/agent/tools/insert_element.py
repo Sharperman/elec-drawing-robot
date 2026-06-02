@@ -19,7 +19,7 @@ class InsertElementInput(BaseModel):
     layer: Optional[str] = Field(None, description="目标图层，None 则使用符号默认图层")
     label: Optional[str] = Field(None, description="设备编号标注，如 T1、QF1")
     scale: float = Field(default=1.0, description="缩放比例，1.0=原始大小")
-    attributes: Optional[dict] = Field(default=None, description="图块属性字典")
+    attributes: Optional[str] = Field(default=None, description="图块属性 JSON 字符串，如 '{\"RATED_V\":\"220V\"}'，可留空")
 
 
 class InsertElementTool(BaseTool):
@@ -103,30 +103,27 @@ class InsertElementTool(BaseTool):
             finally:
                 db.close()
 
-            # 执行插入（带事务）
-            # 注意：直接使用 create_simple_symbol 而非 insert_block，
-            # 因为预定义块在 AutoCAD 中不存在，insert_block 的 COM 失败会污染状态
-            with AutoCADTransaction(f"insert_{symbol_id}") as txn:
-                handle = drawing_ops.create_simple_symbol(
-                    symbol_type=symbol_id,
-                    x=x,
-                    y=y,
-                    label=label,
-                    layer=target_layer,
+            # 执行插入
+            # 注意：不使用 AutoCADTransaction，因为事务用 autocad_connection.doc（心跳线程），
+            # 而 create_simple_symbol 在当前线程重新 GetActiveObject，Undo 标记跨线程无效
+            handle = drawing_ops.create_simple_symbol(
+                symbol_type=symbol_id,
+                x=x,
+                y=y,
+                label=label,
+                layer=target_layer,
+            )
+            label_already_set = True  # create_simple_symbol 已添加标注
+
+            # 添加设备编号标注（如果 create_simple_symbol 未设置）
+            if label and not label_already_set:
+                annotation_ops.add_text(
+                    text=label,
+                    x=x + 2,
+                    y=y - 5,  # 标注在图元下方
+                    height=3.5,
+                    layer="ELEC-TEXT",
                 )
-                label = None  # create_simple_symbol 已添加标注
-
-                # 添加设备编号标注
-                if label:
-                    annotation_ops.add_text(
-                        text=label,
-                        x=x + 2,
-                        y=y - 5,  # 标注在图元下方
-                        height=3.5,
-                        layer="ELEC-TEXT",
-                    )
-
-                txn.commit()
 
             logger.info(f"InsertElement success: {symbol_id} at ({x},{y}) handle={handle}")
             return (

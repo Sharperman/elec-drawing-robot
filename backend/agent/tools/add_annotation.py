@@ -69,18 +69,23 @@ class AddAnnotationTool(BaseTool):
         annotation_type: str = "text",
     ) -> str:
         """执行标注操作"""
+        import pythoncom
+        pythoncom.CoInitialize()
+
         try:
+            import win32com.client
+            from config import settings
             from autocad.annotation_ops import annotation_ops
-            from autocad.connection import autocad_connection
-            from autocad.transaction import AutoCADTransaction
+
+            # 在当前线程获取 COM dispatch（不用心跳线程的 doc）
+            acad = win32com.client.GetActiveObject(settings.AUTOCAD_VERSION)
+            doc = acad.ActiveDocument
 
             # 确定标注坐标
             if handle:
-                doc = autocad_connection.doc
-                entity = doc.HandleToObject(handle)
                 try:
-                    pt = entity.InsertionPoint
-                    base_x, base_y = float(pt[0]), float(pt[1])
+                    entity = doc.HandleToObject(handle)
+                    base_x, base_y = _get_entity_center(entity)
                 except Exception:
                     base_x, base_y = x or 0.0, y or 0.0
 
@@ -94,41 +99,38 @@ class AddAnnotationTool(BaseTool):
 
             handles: list[str] = []
 
-            with AutoCADTransaction(f"annotation_{label}") as txn:
-                if annotation_type == "text":
-                    # 标注设备编号
-                    h = annotation_ops.add_text(
-                        text=label,
+            if annotation_type == "text":
+                # 标注设备编号
+                h = annotation_ops.add_text(
+                    text=label,
+                    x=ann_x,
+                    y=ann_y,
+                    height=text_height,
+                    layer="ELEC-TEXT",
+                )
+                handles.append(h)
+
+                # 标注参数（另起一行）
+                if params:
+                    h2 = annotation_ops.add_text(
+                        text=params,
                         x=ann_x,
-                        y=ann_y,
-                        height=text_height,
+                        y=ann_y - text_height * 1.5,
+                        height=text_height * 0.8,
                         layer="ELEC-TEXT",
                     )
-                    handles.append(h)
+                    handles.append(h2)
 
-                    # 标注参数（另起一行）
-                    if params:
-                        h2 = annotation_ops.add_text(
-                            text=params,
-                            x=ann_x,
-                            y=ann_y - text_height * 1.5,
-                            height=text_height * 0.8,
-                            layer="ELEC-TEXT",
-                        )
-                        handles.append(h2)
-
-                elif annotation_type == "leader" and params:
-                    h = annotation_ops.add_leader(
-                        start_x=ann_x,
-                        start_y=ann_y,
-                        end_x=ann_x + 10,
-                        end_y=ann_y + 5,
-                        text=f"{label}: {params}",
-                        text_height=text_height,
-                    )
-                    handles.append(h)
-
-                txn.commit()
+            elif annotation_type == "leader" and params:
+                h = annotation_ops.add_leader(
+                    start_x=ann_x,
+                    start_y=ann_y,
+                    end_x=ann_x + 10,
+                    end_y=ann_y + 5,
+                    text=f"{label}: {params}",
+                    text_height=text_height,
+                )
+                handles.append(h)
 
             label_text = label + (f" / {params}" if params else "")
             logger.info(f"AddAnnotation success: '{label_text}' at ({ann_x:.1f},{ann_y:.1f})")
@@ -147,3 +149,19 @@ class AddAnnotationTool(BaseTool):
         import asyncio
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, lambda: self._run(**kwargs))
+
+
+def _get_entity_center(entity) -> tuple[float, float]:
+    """获取 AutoCAD 实体的中心坐标，兼容 BlockRef(InsertionPoint) 和 Polyline(GetBoundingBox)"""
+    try:
+        pt = entity.InsertionPoint
+        return float(pt[0]), float(pt[1])
+    except Exception:
+        pass
+    try:
+        min_pt = entity.GetBoundingBox(None, None)[0]
+        max_pt = entity.GetBoundingBox(None, None)[1]
+        return (float(min_pt[0]) + float(max_pt[0])) / 2, (float(min_pt[1]) + float(max_pt[1])) / 2
+    except Exception:
+        pass
+    raise RuntimeError(f"Cannot get position for {entity.ObjectName}")
