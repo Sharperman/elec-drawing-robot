@@ -28,13 +28,15 @@ class DrawAgent:
         self._executor: Optional[AgentExecutor] = None
         self._message_history: list[BaseMessage] = []
 
-    def _build_executor(self, standards_context: str = "", learned_rules: Optional[list[str]] = None) -> AgentExecutor:
+    def _build_executor(self, standards_context: str = "", learned_rules: Optional[list[str]] = None, acad_connected: bool = False, drawing_name: str = "") -> AgentExecutor:
         """
         构建 AgentExecutor（每次调用时动态构建以注入最新规范）
 
         Args:
             standards_context: 从 RAG 检索的规范上下文
             learned_rules: 学习规则列表
+            acad_connected: AutoCAD 是否已连接
+            drawing_name: 当前图纸名称
 
         Returns:
             AgentExecutor 实例
@@ -66,10 +68,12 @@ class DrawAgent:
             QueryDrawingTool(),
         ]
 
-        # 系统提示词（含规范上下文）
+        # 系统提示词（含规范上下文 + AutoCAD 连接状态）
         system_prompt = build_system_prompt(
             standards_context=standards_context,
             learned_rules=learned_rules,
+            acad_connected=acad_connected,
+            drawing_name=drawing_name,
         )
 
         # Prompt 模板
@@ -100,6 +104,8 @@ class DrawAgent:
         image_data: Optional[str] = None,
         standards_context: str = "",
         learned_rules: Optional[list[str]] = None,
+        acad_connected: bool = False,
+        drawing_name: str = "",
     ) -> str:
         """
         单轮对话（非流式）
@@ -109,11 +115,13 @@ class DrawAgent:
             image_data: 附带图片 base64
             standards_context: 规范上下文
             learned_rules: 学习规则
+            acad_connected: AutoCAD 连接状态
+            drawing_name: 当前图纸名称
 
         Returns:
             Agent 回复字符串
         """
-        executor = self._build_executor(standards_context, learned_rules)
+        executor = self._build_executor(standards_context, learned_rules, acad_connected, drawing_name)
 
         # 构建输入
         agent_input: dict = {
@@ -142,6 +150,8 @@ class DrawAgent:
         image_data: Optional[str] = None,
         standards_context: str = "",
         learned_rules: Optional[list[str]] = None,
+        acad_connected: bool = False,
+        drawing_name: str = "",
     ) -> AsyncIterator[str]:
         """
         流式对话（生成 SSE token）
@@ -157,7 +167,7 @@ class DrawAgent:
         from agent.prompts.system_prompt import build_system_prompt
         from langchain_core.callbacks import AsyncCallbackHandler
 
-        system_prompt = build_system_prompt(standards_context, learned_rules)
+        system_prompt = build_system_prompt(standards_context, learned_rules, acad_connected, drawing_name)
 
         llm = ChatOpenAI(
             model=settings.MODEL_NAME,

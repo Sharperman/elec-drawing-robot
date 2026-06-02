@@ -8,6 +8,8 @@ from typing import Optional
 def build_system_prompt(
     standards_context: str = "",
     learned_rules: Optional[list[str]] = None,
+    acad_connected: bool = False,
+    drawing_name: str = "",
 ) -> str:
     """
     构建 Agent 系统提示词
@@ -28,6 +30,12 @@ def build_system_prompt(
     standards_section = ""
     if standards_context and standards_context != "暂无相关规范信息":
         standards_section = f"\n\n## 当前相关规范\n{standards_context}"
+
+    # AutoCAD 连接状态
+    if acad_connected:
+        acad_status = f"\n\n## 当前状态\nAutoCAD 已连接，当前图纸: {drawing_name or '未命名'}。你可以直接调用绘图工具。"
+    else:
+        acad_status = "\n\n## 当前状态\n⚠️ AutoCAD 未连接。如果用户要求绘图，请告知用户先连接 AutoCAD。查询类操作仍可正常使用。"
 
     return f"""# 电气图纸绘制机器人
 
@@ -64,7 +72,9 @@ def build_system_prompt(
 - 对于复杂操作（多个图元），在开始前输出操作计划，等待用户确认
 
 ## 错误处理
-- AutoCAD 未连接时，提示用户先打开 AutoCAD 并点击"连接"按钮
+- 遇到绘图操作失败时，**先尝试调用相应工具**，工具本身会返回连接状态和错误信息
+- **不要**在未调用工具前假设 AutoCAD 未连接——始终先尝试执行
+- 如果工具返回连接错误，再提示用户检查 AutoCAD 连接
 - 图块未找到时，提示用户确认 AutoCAD 图块库是否完整
 - LLM API 失败时，使用基于规则的意图匹配作为 fallback
 {standards_section}{rules_section}
@@ -73,7 +83,7 @@ def build_system_prompt(
 - **不要**在未确认的情况下删除已有图元
 - **不要**修改图纸标准图框和标题栏内容
 - 坐标值必须是合理的图纸范围内的数值（通常 0-2000mm 范围）
-- 文字标注高度遵循规范要求（正文 3.5mm，标题 5.0mm）
+- 文字标注高度遵循规范要求（正文 3.5mm，标题 5.0mm）{acad_status}
 """
 
 

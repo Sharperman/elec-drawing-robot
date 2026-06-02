@@ -53,6 +53,8 @@ class AutoCADConnection:
             连接是否成功
         """
         try:
+            import pythoncom
+            pythoncom.CoInitialize()
             import win32com.client  # type: ignore
 
             from config import settings

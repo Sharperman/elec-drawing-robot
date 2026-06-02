@@ -118,9 +118,15 @@ async def chat(
         from knowledge.rag_retriever import rag_retriever
         from feedback.injector import rule_injector
         from agent.draw_agent import get_agent
+        from autocad.connection import autocad_connection
 
         standards_context = await rag_retriever.build_context(request.message)
         _, learned_rules = rule_injector.inject(request.session_id, standards_context)
+
+        # 获取 AutoCAD 连接状态
+        acad_status = autocad_connection.get_status()
+        acad_connected = acad_status.get("connected", False)
+        drawing_name = acad_status.get("drawing_name", "")
 
         # 调用 Agent
         agent = get_agent(request.session_id)
@@ -129,6 +135,8 @@ async def chat(
             image_data=request.image_data,
             standards_context=standards_context,
             learned_rules=learned_rules,
+            acad_connected=acad_connected,
+            drawing_name=drawing_name,
         )
 
         # 保存 Assistant 回复
@@ -193,9 +201,14 @@ async def chat_stream(
             from knowledge.rag_retriever import rag_retriever
             from feedback.injector import rule_injector
             from agent.draw_agent import get_agent
+            from autocad.connection import autocad_connection
 
             standards_context = await rag_retriever.build_context(message)
             _, learned_rules = rule_injector.inject(session_id, standards_context)
+
+            acad_status = autocad_connection.get_status()
+            acad_connected = acad_status.get("connected", False)
+            drawing_name = acad_status.get("drawing_name", "")
 
             agent = get_agent(session_id)
 
@@ -204,6 +217,8 @@ async def chat_stream(
                 user_input=message,
                 standards_context=standards_context,
                 learned_rules=learned_rules,
+                acad_connected=acad_connected,
+                drawing_name=drawing_name,
             ):
                 full_response += token
                 # SSE 格式

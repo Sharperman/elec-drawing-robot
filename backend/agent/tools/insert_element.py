@@ -82,16 +82,28 @@ class InsertElementTool(BaseTool):
 
             # 执行插入（带事务）
             with AutoCADTransaction(f"insert_{symbol_id}") as txn:
-                handle = drawing_ops.insert_block(
-                    block_name=block_name,
-                    x=x,
-                    y=y,
-                    x_scale=scale,
-                    y_scale=scale,
-                    rotation=rotation,
-                    layer=target_layer,
-                    attributes=attributes,
-                )
+                try:
+                    handle = drawing_ops.insert_block(
+                        block_name=block_name,
+                        x=x,
+                        y=y,
+                        x_scale=scale,
+                        y_scale=scale,
+                        rotation=rotation,
+                        layer=target_layer,
+                        attributes=attributes,
+                    )
+                except RuntimeError as block_err:
+                    # 图块不存在时，自动使用简易符号 fallback
+                    logger.warning(f"Block '{block_name}' not found, using simple symbol fallback: {block_err}")
+                    handle = drawing_ops.create_simple_symbol(
+                        symbol_type=symbol_id,
+                        x=x,
+                        y=y,
+                        label=label,
+                        layer=target_layer,
+                    )
+                    label = None  # create_simple_symbol 已添加标注
 
                 # 添加设备编号标注
                 if label:

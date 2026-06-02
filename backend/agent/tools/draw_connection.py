@@ -118,8 +118,10 @@ class DrawConnectionTool(BaseTool):
                 f"DrawConnection success: {from_handle} -> {to_handle} "
                 f"type={line_type} layer={target_layer}"
             )
+            type_names = {"bus": "母线", "wire": "导线", "cable": "电缆"}
+            type_label = type_names.get(line_type, "连线")
             return (
-                f"成功绘制{{'bus': '母线', 'wire': '导线', 'cable': '电缆'}.get(line_type, '连线')}，"
+                f"成功绘制{type_label}，"
                 f"从 ({from_x:.1f},{from_y:.1f}) 到 ({to_x:.1f},{to_y:.1f})，"
                 f"图层: {target_layer}，Handle(s): {', '.join(handles)}"
             )

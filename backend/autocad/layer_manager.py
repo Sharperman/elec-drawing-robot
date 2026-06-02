@@ -62,7 +62,12 @@ class LayerManager:
             lineweight: 线宽（mm），如 0.25/0.35/0.5
         """
         try:
-            doc = autocad_connection.doc
+            import pythoncom
+            pythoncom.CoInitialize()
+            import win32com.client  # type: ignore
+            from config import settings
+            acad = win32com.client.GetActiveObject(settings.AUTOCAD_VERSION)
+            doc = acad.ActiveDocument
             layers = doc.Layers
 
             # 检查图层是否已存在

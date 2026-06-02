@@ -37,10 +37,14 @@ class AnnotationOps:
             文字图元 Handle
         """
         try:
+            import pythoncom
+            pythoncom.CoInitialize()
             import win32com.client  # type: ignore
+            from config import settings
 
-            model_space = autocad_connection.model_space
-            doc = autocad_connection.doc
+            acad = win32com.client.GetActiveObject(settings.AUTOCAD_VERSION)
+            doc = acad.ActiveDocument
+            model_space = doc.ModelSpace
 
             insertion_point = win32com.client.VARIANT(
                 win32com.client.pythoncom.VT_ARRAY | win32com.client.pythoncom.VT_R8,
@@ -88,10 +92,14 @@ class AnnotationOps:
             标注图元 Handle
         """
         try:
+            import pythoncom
+            pythoncom.CoInitialize()
             import win32com.client  # type: ignore
+            from config import settings
 
-            model_space = autocad_connection.model_space
-            doc = autocad_connection.doc
+            acad = win32com.client.GetActiveObject(settings.AUTOCAD_VERSION)
+            doc = acad.ActiveDocument
+            model_space = doc.ModelSpace
 
             ext_point1 = win32com.client.VARIANT(
                 win32com.client.pythoncom.VT_ARRAY | win32com.client.pythoncom.VT_R8,
@@ -151,10 +159,14 @@ class AnnotationOps:
             引线图元 Handle
         """
         try:
+            import pythoncom
+            pythoncom.CoInitialize()
             import win32com.client  # type: ignore
+            from config import settings
 
-            model_space = autocad_connection.model_space
-            doc = autocad_connection.doc
+            acad = win32com.client.GetActiveObject(settings.AUTOCAD_VERSION)
+            doc = acad.ActiveDocument
+            model_space = doc.ModelSpace
 
             # 引线折点数组（起点 + 终点）
             points = win32com.client.VARIANT(
