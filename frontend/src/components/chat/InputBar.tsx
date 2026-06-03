@@ -1,19 +1,26 @@
 /**
  * InputBar.tsx
- * 输入栏：聚焦发光 + 流式进度条 + 发送按钮动画 + 快捷指令
+ * 输入栏：运行模式选择器 + 聚焦发光 + 流式进度条 + 发送按钮动画 + 快捷指令
  */
 import React, { useState, useRef, useCallback, KeyboardEvent } from 'react';
 import { clsx } from 'clsx';
 import { Send, Square, Paperclip, Command } from 'lucide-react';
 import QuickCommandPanel from './QuickCommandPanel';
+import type { RunMode } from '@/types';
 
 interface InputBarProps {
-  onSend: (message: string, imageData?: string) => void;
+  onSend: (message: string, imageData?: string, mode?: RunMode) => void;
   onStop: () => void;
   isLoading: boolean;
   isStreaming: boolean;
   disabled?: boolean;
 }
+
+const MODES: { key: RunMode; label: string; icon: string; desc: string }[] = [
+  { key: 'auto',  label: '/Auto',  icon: '🤖', desc: '自动判断模式' },
+  { key: 'check', label: '/Check', icon: '📋', desc: '图纸审查（优先 DXF 文本解析 + 规范知识库）' },
+  { key: 'draw',  label: '/Draw',  icon: '✏️',  desc: '绘图模式（优先 COM 模式）' },
+];
 
 const InputBar: React.FC<InputBarProps> = ({
   onSend, onStop, isLoading, isStreaming, disabled,
@@ -21,6 +28,7 @@ const InputBar: React.FC<InputBarProps> = ({
   const [input, setInput] = useState('');
   const [focused, setFocused] = useState(false);
   const [showCommands, setShowCommands] = useState(false);
+  const [mode, setMode] = useState<RunMode>('auto');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const canSend = input.trim().length > 0 && !isLoading && !disabled;
@@ -36,7 +44,7 @@ const InputBar: React.FC<InputBarProps> = ({
 
   const handleSend = () => {
     if (!canSend) return;
-    onSend(input.trim());
+    onSend(input.trim(), undefined, mode);
     setInput('');
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -73,6 +81,8 @@ const InputBar: React.FC<InputBarProps> = ({
     textareaRef.current?.focus();
   };
 
+  const currentMode = MODES.find(m => m.key === mode)!;
+
   return (
     <div className="flex-shrink-0">
       {/* 流式进度条 */}
@@ -82,6 +92,36 @@ const InputBar: React.FC<InputBarProps> = ({
                           animate-pulse bg-[length:200%_100%]" />
         </div>
       )}
+
+      {/* 运行模式选择器 */}
+      <div className="px-3 pt-2 pb-1">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] text-gray-500 mr-1">运行模式</span>
+          {MODES.map((m) => (
+            <button
+              key={m.key}
+              onClick={() => setMode(m.key)}
+              disabled={isStreaming}
+              title={m.desc}
+              className={clsx(
+                'flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium',
+                'transition-all duration-200 border',
+                isStreaming && 'opacity-40 cursor-not-allowed',
+                mode === m.key
+                  ? 'bg-blue-600/20 border-blue-500/50 text-blue-400 shadow-sm shadow-blue-500/20'
+                  : 'bg-gray-800/50 border-gray-700/50 text-gray-500 hover:text-gray-300 hover:bg-gray-800',
+              )}
+            >
+              <span>{m.icon}</span>
+              <span>{m.label}</span>
+            </button>
+          ))}
+          {/* 当前模式说明 */}
+          <span className="text-[10px] text-gray-600 ml-2 truncate">
+            {currentMode.desc}
+          </span>
+        </div>
+      </div>
 
       {/* 快捷指令面板 */}
       {showCommands && (

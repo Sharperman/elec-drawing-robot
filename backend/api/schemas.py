@@ -29,12 +29,25 @@ class PagedResponse(BaseModel):
 # Chat / Session Schema
 # ============================================================
 
+# 运行模式枚举
+RunMode = str  # "auto" | "check" | "draw"
+VALID_RUN_MODES = {"auto", "check", "draw"}
+
+
 class ChatRequest(BaseModel):
     """发送对话消息请求"""
     session_id: str = Field(..., description="会话 ID")
     message: str = Field(..., min_length=1, max_length=4096, description="用户消息")
     image_data: Optional[str] = Field(None, description="附带图片的 base64 数据")
     stream: bool = Field(default=True, description="是否使用 SSE 流式响应")
+    mode: RunMode = Field(default="auto", description="运行模式: auto=自动, check=图纸审查, draw=绘图")
+
+    @field_validator("mode")
+    @classmethod
+    def validate_mode(cls, v: str) -> str:
+        if v not in VALID_RUN_MODES:
+            raise ValueError(f"mode must be one of {VALID_RUN_MODES}, got '{v}'")
+        return v
 
 
 class ChatConfirmRequest(BaseModel):

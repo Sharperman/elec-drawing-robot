@@ -7,7 +7,9 @@ import toast from 'react-hot-toast';
 import type { ApiResponse } from '@/types';
 
 // 开发环境走 Vite proxy（/api → 127.0.0.1:8765），生产环境直连
-const BASE_URL = import.meta.env.DEV ? '' : 'http://localhost:8765';
+const BASE_URL = (import.meta as Record<string, any>).env?.DEV
+  ? ''
+  : 'http://localhost:8765';
 
 const apiClient: AxiosInstance = axios.create({
   baseURL: BASE_URL,

@@ -1,5 +1,6 @@
 /**
  * useChat Hook - 发送指令、SSE 流、确认执行、重新生成、反馈
+ * 支持新的结构化 Agent 步骤事件
  */
 import { useCallback } from 'react';
 import toast from 'react-hot-toast';
@@ -8,7 +9,7 @@ import apiClient from '@/services/apiClient';
 import { sseClient } from '@/services/sseClient';
 import { useChatStore } from '@/stores/chatStore';
 import { useSessionStore } from '@/stores/sessionStore';
-import type { Message, ChatConfirmRequest } from '@/types';
+import type { Message, ChatConfirmRequest, RunMode } from '@/types';
 
 export function useChat() {
   const {
@@ -18,19 +19,24 @@ export function useChat() {
     startStreaming,
     appendStreamToken,
     finishStreaming,
+    addThinkingStep,
+    addToolStartStep,
+    updateToolEndStep,
     setLoading,
     setError,
     removeLastAssistantMessage,
     isLoading,
     isStreaming,
     streamingMessage,
+    agentSteps,
+    reportPath,
+    setReportPath,
     error,
   } = useChatStore();
 
   const { currentSessionId } = useSessionStore();
 
   // ── 加载历史 ──
-
   const loadHistory = useCallback(async (sessionId: string) => {
     try {
       const resp = await apiClient.get<{ data: Message[] }>(
@@ -45,10 +51,10 @@ export function useChat() {
   }, [setMessages]);
 
   // ── 发送消息（流式） ──
-
   const sendMessage = useCallback(async (
     message: string,
     imageData?: string,
+    mode: RunMode = 'auto',
   ) => {
     if (!currentSessionId) {
       toast.error('请先选择或创建一个会话');
@@ -73,7 +79,7 @@ export function useChat() {
     addMessage(currentSessionId, userMsg);
     startStreaming(currentSessionId);
 
-    // 开始 SSE 流式对话
+    // 开始 SSE 流式对话（新协议）
     sseClient.connect(currentSessionId, message, {
       onToken: (token) => {
         appendStreamToken(token);
@@ -85,15 +91,31 @@ export function useChat() {
         setError(err);
         toast.error(`AI 响应失败: ${err.slice(0, 100)}`);
       },
-    });
+      // 新回调：Agent 步骤
+      onThinking: (content) => {
+        addThinkingStep(content);
+      },
+      onToolStart: (toolName, toolInput) => {
+        addToolStartStep(toolName, toolInput);
+      },
+      onToolEnd: (toolName, toolOutput) => {
+        updateToolEndStep(toolName, toolOutput);
+      },
+      // 审查报告回调
+      onReport: (reportPathFromServer) => {
+        setReportPath(reportPathFromServer);
+        toast.success('📋 图纸审查报告已生成');
+      },
+    }, mode);
   }, [
     currentSessionId, isLoading, isStreaming,
     addMessage, startStreaming, appendStreamToken,
     finishStreaming, setError,
+    addThinkingStep, addToolStartStep, updateToolEndStep,
+    setReportPath,
   ]);
 
   // ── 停止流式 ──
-
   const stopStreaming = useCallback(() => {
     sseClient.disconnect();
     const current = streamingMessage?.content ?? '';
@@ -101,24 +123,19 @@ export function useChat() {
   }, [streamingMessage, finishStreaming]);
 
   // ── 重新生成 ──
-
   const regenerateMessage = useCallback((_aiMessage: Message) => {
     if (!currentSessionId) return;
 
-    // 删除最后一条 AI 消息
     removeLastAssistantMessage(currentSessionId);
 
-    // 找到最后一条用户消息
     const msgs = getMessages(currentSessionId);
     const lastUserMsg = [...msgs].reverse().find(m => m.role === 'user');
     if (lastUserMsg) {
-      // 用相同的用户消息重新发送
       sendMessage(lastUserMsg.content, lastUserMsg.image_data);
     }
   }, [currentSessionId, removeLastAssistantMessage, getMessages, sendMessage]);
 
   // ── 反馈 ──
-
   const sendFeedback = useCallback(async (
     messageId: number,
     type: 'positive' | 'negative',
@@ -133,12 +150,11 @@ export function useChat() {
       });
       toast.success(type === 'positive' ? '感谢反馈 👍' : '已记录，我们会改进');
     } catch {
-      // 静默处理（feedback 接口可能尚未实现）
+      // 静默处理
     }
   }, [currentSessionId]);
 
   // ── 确认执行计划 ──
-
   const confirmPlan = useCallback(async (confirm: boolean) => {
     if (!currentSessionId) return;
 
@@ -165,6 +181,8 @@ export function useChat() {
   return {
     messages: currentSessionId ? getMessages(currentSessionId) : [],
     streamingMessage,
+    agentSteps,
+    reportPath,
     isLoading,
     isStreaming,
     error,
@@ -174,5 +192,6 @@ export function useChat() {
     sendFeedback,
     confirmPlan,
     loadHistory,
+    setReportPath,
   };
 }

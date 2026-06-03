@@ -5,7 +5,8 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { ChevronDown, Zap, Search, Lightbulb } from 'lucide-react';
 import MessageItem from './MessageItem';
-import type { Message } from '@/types';
+import StreamingSteps from './StreamingSteps';
+import type { Message, AgentStep } from '@/types';
 
 // ─── 示例提示词分组 ────────────────────────────────────────────
 
@@ -121,6 +122,9 @@ interface MessageListProps {
   messages: Message[];
   streamingContent?: string;
   isLoading: boolean;
+  /** Agent 执行步骤（新协议） */
+  agentSteps?: AgentStep[];
+  isStreaming?: boolean;
   onExampleClick: (prompt: string) => void;
   onRegenerate: (msg: Message) => void;
   onFeedback: (msgId: number, type: 'positive' | 'negative') => void;
@@ -128,6 +132,7 @@ interface MessageListProps {
 
 const MessageList: React.FC<MessageListProps> = ({
   messages, streamingContent,
+  agentSteps = [], isStreaming = false,
   onExampleClick, onRegenerate, onFeedback,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -194,21 +199,32 @@ const MessageList: React.FC<MessageListProps> = ({
             );
           })}
 
-          {/* 流式消息 */}
-          {streamingContent !== undefined && streamingContent !== null && (
-            <MessageItem
-              message={{
-                id: -1,
-                session_id: '',
-                role: 'assistant',
-                content: streamingContent,
-                is_streaming: true,
-                created_at: new Date().toISOString(),
-              }}
-              isGrouped={false}
-              isFirstInGroup={true}
-            />
-          )}
+          {/* 流式消息 + Agent 步骤 */}
+          {(streamingContent !== undefined && streamingContent !== null) || agentSteps.length > 0 ? (
+            <div className="flex flex-col gap-1">
+              {/* Agent 步骤时间线 */}
+              <StreamingSteps
+                steps={agentSteps}
+                streamingText={streamingContent ?? ''}
+                isStreaming={isStreaming}
+              />
+              {/* 纯文本流式（无步骤时回退到原有渲染） */}
+              {agentSteps.length === 0 && streamingContent !== undefined && streamingContent !== null && (
+                <MessageItem
+                  message={{
+                    id: -1,
+                    session_id: '',
+                    role: 'assistant',
+                    content: streamingContent,
+                    is_streaming: true,
+                    created_at: new Date().toISOString(),
+                  }}
+                  isGrouped={false}
+                  isFirstInGroup={true}
+                />
+              )}
+            </div>
+          ) : null}
         </div>
         <div ref={bottomRef} />
       </div>

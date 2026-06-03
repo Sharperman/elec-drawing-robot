@@ -61,7 +61,12 @@ export interface ChatRequest {
   message: string;
   image_data?: string;
   stream?: boolean;
+  /** 运行模式: auto=自动, check=图纸审查, draw=绘图 */
+  mode?: RunMode;
 }
+
+/** 运行模式类型 */
+export type RunMode = 'auto' | 'check' | 'draw';
 
 export interface ChatConfirmRequest {
   session_id: string;
@@ -75,6 +80,42 @@ export interface SSEChunk {
   done: boolean;
   full?: string;
   error?: string;
+}
+
+/** 新的结构化 SSE 事件类型 */
+export type SSEEventType =
+  | 'thinking'
+  | 'tool_start'
+  | 'tool_end'
+  | 'text'
+  | 'done'
+  | 'error'
+  | 'report';
+
+/** 单个 Agent 步骤（前端渲染用） */
+export interface AgentStep {
+  id: string;
+  type: 'thinking' | 'tool_call' | 'text';
+  status: 'running' | 'done';
+  /** 思考阶段 */
+  thinkingContent?: string;
+  /** 工具调用 */
+  toolName?: string;
+  toolInput?: string;
+  toolOutput?: string;
+  /** 文本 token 累积 */
+  textContent?: string;
+}
+
+/** 结构化 SSE 事件 */
+export interface SSEEvent {
+  type: SSEEventType;
+  content?: string;
+  tool_name?: string;
+  tool_input?: string;
+  tool_output?: string;
+  /** 审查报告路径（type=report 时） */
+  path?: string;
 }
 
 // ============================================================

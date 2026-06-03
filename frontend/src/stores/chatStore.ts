@@ -1,9 +1,9 @@
 /**
- * Chat Store - 管理对话消息列表、流式状态、反馈
+ * Chat Store - 管理对话消息列表、流式状态、Agent 步骤
  */
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import type { Message } from '@/types';
+import type { Message, AgentStep } from '@/types';
 
 interface StreamingMessage {
   content: string;
@@ -13,10 +13,14 @@ interface StreamingMessage {
 interface ChatState {
   messages: Record<string, Message[]>;
   streamingMessage: StreamingMessage | null;
+  /** Agent 执行步骤（流式时实时更新） */
+  agentSteps: AgentStep[];
   isLoading: boolean;
   isStreaming: boolean;
   pendingPlan: string | null;
   error: string | null;
+  /** 审查报告路径 */
+  reportPath: string | null;
 }
 
 interface ChatActions {
@@ -26,22 +30,36 @@ interface ChatActions {
   startStreaming: (sessionId: string) => void;
   appendStreamToken: (token: string) => void;
   finishStreaming: (fullContent: string) => void;
+  /** Agent 步骤操作 */
+  addThinkingStep: (content: string) => void;
+  addToolStartStep: (toolName: string, toolInput: string) => void;
+  updateToolEndStep: (toolName: string, toolOutput: string) => void;
+  clearAgentSteps: () => void;
   setLoading: (loading: boolean) => void;
   setPendingPlan: (plan: string | null) => void;
   setError: (error: string | null) => void;
+  /** 审查报告 */
+  setReportPath: (path: string | null) => void;
   clearMessages: (sessionId: string) => void;
-  /** 删除最后一条 assistant 消息（用于重新生成） */
   removeLastAssistantMessage: (sessionId: string) => Message | null;
   reset: () => void;
+}
+
+let stepIdCounter = 0;
+function nextStepId(): string {
+  stepIdCounter += 1;
+  return `step-${stepIdCounter}-${Date.now()}`;
 }
 
 const initialState: ChatState = {
   messages: {},
   streamingMessage: null,
+  agentSteps: [],
   isLoading: false,
   isStreaming: false,
   pendingPlan: null,
   error: null,
+  reportPath: null,
 };
 
 export const useChatStore = create<ChatState & ChatActions>()(
@@ -72,6 +90,7 @@ export const useChatStore = create<ChatState & ChatActions>()(
         state.isStreaming = true;
         state.isLoading = true;
         state.streamingMessage = { content: '', sessionId };
+        state.agentSteps = [];
         state.error = null;
       });
     },
@@ -104,6 +123,55 @@ export const useChatStore = create<ChatState & ChatActions>()(
           state.messages[sessionId].push(newMessage);
         }
         state.streamingMessage = null;
+        // 不清除 agentSteps，让历史消息可以展示
+      });
+    },
+
+    addThinkingStep: (content: string) => {
+      set((state) => {
+        state.agentSteps.push({
+          id: nextStepId(),
+          type: 'thinking',
+          status: 'running',
+          thinkingContent: content,
+        });
+      });
+    },
+
+    addToolStartStep: (toolName: string, toolInput: string) => {
+      set((state) => {
+        // 标记上一个 thinking 步骤为 done
+        const lastThinking = [...state.agentSteps].reverse().find(s => s.type === 'thinking' && s.status === 'running');
+        if (lastThinking) {
+          lastThinking.status = 'done';
+        }
+        state.agentSteps.push({
+          id: nextStepId(),
+          type: 'tool_call',
+          status: 'running',
+          toolName,
+          toolInput,
+        });
+      });
+    },
+
+    updateToolEndStep: (toolName: string, toolOutput: string) => {
+      set((state) => {
+        // 找到最后一个 running 状态的 tool_call
+        const steps = state.agentSteps;
+        for (let i = steps.length - 1; i >= 0; i--) {
+          if (steps[i].type === 'tool_call' && steps[i].status === 'running' && steps[i].toolName === toolName) {
+            steps[i].toolOutput = toolOutput;
+            steps[i].status = 'done';
+            break;
+          }
+        }
+      });
+    },
+
+    clearAgentSteps: () => {
+      set((state) => {
+        state.agentSteps = [];
       });
     },
 
@@ -128,6 +196,12 @@ export const useChatStore = create<ChatState & ChatActions>()(
       });
     },
 
+    setReportPath: (path: string | null) => {
+      set((state) => {
+        state.reportPath = path;
+      });
+    },
+
     clearMessages: (sessionId: string) => {
       set((state) => {
         state.messages[sessionId] = [];
@@ -139,7 +213,6 @@ export const useChatStore = create<ChatState & ChatActions>()(
       set((state) => {
         const msgs = state.messages[sessionId];
         if (msgs && msgs.length > 0) {
-          // 从后向前找最后一条 assistant 消息
           for (let i = msgs.length - 1; i >= 0; i--) {
             if (msgs[i].role === 'assistant') {
               removedMsg = { ...msgs[i] };

@@ -1,44 +1,57 @@
 /**
+ * ChatPanel.tsx
  * 对话面板主组件 - 升级版
- * 标题栏含会话信息 + CAD 状态 + 更多操作
+ * 标题栏含会话信息 + CAD 状态 + 更多操作 + 运行模式
  */
 import React, { useEffect, useCallback, useState } from 'react';
-import { MessageSquare, RefreshCw, Trash2, Download, ChevronDown } from 'lucide-react';
+import { MessageSquare, RefreshCw, Trash2, Download, ChevronDown, FileText } from 'lucide-react';
 import { clsx } from 'clsx';
 import MessageList from './MessageList';
 import InputBar from './InputBar';
 import { useChat } from '@/hooks/useChat';
 import { useSessionStore } from '@/stores/sessionStore';
 import { useConnectionStore } from '@/stores/connectionStore';
+import type { RunMode } from '@/types';
 
 const ChatPanel: React.FC = () => {
   const { currentSessionId, sessions } = useSessionStore();
   const { isConnected, connectionError } = useConnectionStore();
   const [showMenu, setShowMenu] = useState(false);
+  const [localReportPath, setLocalReportPath] = useState<string | null>(null);
 
   const {
     messages, streamingMessage, isLoading, isStreaming, error,
+    agentSteps, reportPath: storeReportPath,
     sendMessage, stopStreaming, loadHistory, regenerateMessage, sendFeedback,
   } = useChat();
 
-  const currentSession = sessions.find((s) => s.session_id === currentSessionId);
-
+  // 同步 reportPath 到本地 state
   useEffect(() => {
-    if (currentSessionId) loadHistory(currentSessionId);
-  }, [currentSessionId]);
+    if (storeReportPath && storeReportPath !== localReportPath) {
+      setLocalReportPath(storeReportPath);
+    }
+  }, [storeReportPath]);
 
-  const handleExampleClick = useCallback((prompt: string) => {
-    sendMessage(prompt);
+  const handleReportOpen = useCallback(() => {
+    const path = storeReportPath || localReportPath;
+    if (path) {
+      window.open(`file:///${path.replace(/\\/g, '/')}`, '_blank');
+    }
+  }, [storeReportPath, localReportPath]);
+
+  const handleExampleClick = useCallback((prompt: string, mode?: RunMode) => {
+    sendMessage(prompt, undefined, mode);
   }, [sendMessage]);
 
   const handleClearChat = () => {
-    // 清空当前会话消息（从 store 中移除）
     if (currentSessionId) {
       const { setMessages } = require('@/stores/chatStore').useChatStore.getState();
       setMessages(currentSessionId, []);
     }
     setShowMenu(false);
   };
+
+  const currentSession = sessions.find((s) => s.session_id === currentSessionId);
 
   return (
     <div className="flex flex-col h-full bg-gray-950">
@@ -100,7 +113,7 @@ const ChatPanel: React.FC = () => {
                 {showMenu && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
-                    <div className="absolute right-0 top-8 z-50 w-40 py-1 rounded-lg
+                    <div className="absolute right-0 top-8 z-50 w-44 py-1 rounded-lg
                                     bg-gray-800 border border-gray-700 shadow-xl">
                       <button
                         onClick={handleClearChat}
@@ -109,6 +122,16 @@ const ChatPanel: React.FC = () => {
                       >
                         <Trash2 className="w-3.5 h-3.5 text-gray-500" />
                         清空对话
+                      </button>
+                      <button
+                        onClick={() => { setShowMenu(false); handleReportOpen(); }}
+                        disabled={!storeReportPath && !localReportPath}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-xs
+                                   text-gray-300 hover:bg-gray-700 transition-colors
+                                   disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <FileText className="w-3.5 h-3.5 text-gray-500" />
+                        查看审查报告
                       </button>
                       <button
                         onClick={() => setShowMenu(false)}
@@ -140,6 +163,8 @@ const ChatPanel: React.FC = () => {
           messages={messages}
           streamingContent={streamingMessage?.content}
           isLoading={isLoading}
+          agentSteps={agentSteps}
+          isStreaming={isStreaming}
           onExampleClick={handleExampleClick}
           onRegenerate={regenerateMessage}
           onFeedback={sendFeedback}
@@ -155,7 +180,7 @@ const ChatPanel: React.FC = () => {
 
       {/* 输入栏 */}
       <InputBar
-        onSend={sendMessage}
+        onSend={(msg, _img, mode) => sendMessage(msg, _img, (mode as RunMode) || 'auto')}
         onStop={stopStreaming}
         isLoading={isLoading}
         isStreaming={isStreaming}

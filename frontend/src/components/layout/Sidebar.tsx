@@ -2,11 +2,12 @@
  * Sidebar.tsx
  * 左侧边栏：Logo + 搜索 + 新建会话 + 历史会话（分组+时间+预览）+ 底部导航
  */
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSessionStore } from '@/stores/sessionStore';
 import apiClient from '@/services/apiClient';
 import type { Session } from '@/types';
+import { useChatStore } from '@/stores/chatStore';
 import {
   PlusIcon, ChatBubbleLeftRightIcon, TrashIcon, Cog6ToothIcon,
   ChevronLeftIcon, BookOpenIcon, RectangleGroupIcon,
@@ -183,10 +184,29 @@ const NavItem: React.FC<NavItemProps> = ({ icon, label, desc, isActive, onClick 
 const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { sessions, currentSessionId, setCurrentSession, addSession, removeSession, updateSession } =
+  const { sessions, currentSessionId, setCurrentSession, setSessions, addSession, removeSession, updateSession } =
     useSessionStore();
+  const { setMessages } = useChatStore();
 
   const [searchQuery, setSearchQuery] = useState('');
+
+  // ─── 启动时从后端加载会话列表 ───────────────────────────────
+  useEffect(() => {
+    let cancelled = false;
+    const loadSessions = async () => {
+      try {
+        const res = await apiClient.get('/api/chat/sessions');
+        const apiData = res.data; // ApiResponse
+        if (!cancelled && apiData?.code === 0 && apiData.data) {
+          setSessions(apiData.data);
+        }
+      } catch (e) {
+        console.warn('[Sidebar] 加载会话列表失败（后端未启动？）', e);
+      }
+    };
+    loadSessions();
+    return () => { cancelled = true; };
+  }, [setSessions]);
 
   const filteredSessions = useMemo(() => {
     if (!searchQuery.trim()) return sessions;
@@ -214,12 +234,29 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
     navigate('/');
   };
 
-  const handleSelectSession = (id: string) => {
+  const handleSelectSession = async (id: string) => {
     setCurrentSession(id);
     navigate('/');
+
+    // 从后端加载该会话的消息历史
+    try {
+      const res = await apiClient.get(`/api/chat/sessions/${encodeURIComponent(id)}/messages`);
+      const apiData = res.data; // ApiResponse
+      if (apiData?.code === 0 && apiData.data) {
+        setMessages(id, apiData.data);
+      }
+    } catch (e) {
+      console.warn('[Sidebar] 加载消息历史失败', e);
+    }
   };
 
-  const handleDeleteSession = (id: string) => {
+  const handleDeleteSession = async (id: string) => {
+    // 先调后端删除，再更新本地状态
+    try {
+      await apiClient.delete(`/api/chat/sessions/${encodeURIComponent(id)}`);
+    } catch (e) {
+      console.warn('[Sidebar] 后端删除会话失败，仅本地移除', e);
+    }
     removeSession(id);
   };
 

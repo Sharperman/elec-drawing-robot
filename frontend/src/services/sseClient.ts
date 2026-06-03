@@ -1,18 +1,30 @@
 /**
  * SSE 流式响应客户端
- * 管理 EventSource 生命周期，处理 token 流
+ * 管理 EventSource 生命周期，处理结构化 Agent 事件
  */
 import { BASE_URL } from './apiClient';
-import type { SSEChunk } from '@/types';
+import type { SSEEvent } from '@/types';
 
 type TokenCallback = (token: string) => void;
 type DoneCallback = (fullText: string) => void;
 type ErrorCallback = (error: string) => void;
 
+/** 新增：结构化事件回调 */
+type ThinkingCallback = (content: string) => void;
+type ToolStartCallback = (toolName: string, toolInput: string) => void;
+type ToolEndCallback = (toolName: string, toolOutput: string) => void;
+/** 审查报告回调 */
+type ReportCallback = (reportPath: string) => void;
+
 interface SSEClientOptions {
   onToken: TokenCallback;
   onDone: DoneCallback;
   onError: ErrorCallback;
+  /** 新增回调 */
+  onThinking?: ThinkingCallback;
+  onToolStart?: ToolStartCallback;
+  onToolEnd?: ToolEndCallback;
+  onReport?: ReportCallback;
 }
 
 export class SSEClient {
@@ -21,22 +33,19 @@ export class SSEClient {
 
   /**
    * 开始 SSE 流式对话
-   *
-   * @param sessionId 会话 ID
-   * @param message 用户消息
-   * @param options 回调函数集合
    */
   connect(
     sessionId: string,
     message: string,
-    options: SSEClientOptions
+    options: SSEClientOptions,
+    mode: string = 'auto',
   ): void {
-    // 断开已有连接
     this.disconnect();
 
     const params = new URLSearchParams({
       session_id: sessionId,
       message,
+      mode,
     });
 
     const url = `${BASE_URL}/api/chat/stream?${params.toString()}`;
@@ -46,22 +55,54 @@ export class SSEClient {
 
       this.eventSource.onmessage = (event: MessageEvent<string>) => {
         try {
-          const chunk: SSEChunk = JSON.parse(event.data);
+          const evt: SSEEvent = JSON.parse(event.data);
 
-          if (chunk.error) {
-            options.onError(chunk.error);
-            this.disconnect();
-            return;
-          }
+          switch (evt.type) {
+            case 'thinking':
+              options.onThinking?.(evt.content ?? '');
+              break;
 
-          if (chunk.done) {
-            options.onDone(chunk.full ?? '');
-            this.disconnect();
-          } else if (chunk.token) {
-            options.onToken(chunk.token);
+            case 'tool_start':
+              options.onToolStart?.(evt.tool_name ?? '', evt.tool_input ?? '');
+              break;
+
+            case 'tool_end':
+              options.onToolEnd?.(evt.tool_name ?? '', evt.tool_output ?? '');
+              break;
+
+            case 'text':
+              options.onToken(evt.content ?? '');
+              break;
+
+            case 'done':
+              options.onDone('');
+              this.disconnect();
+              break;
+
+            case 'error':
+              options.onError(evt.content ?? '');
+              this.disconnect();
+              break;
+
+            case 'report':
+              options.onReport?.(evt.path ?? '');
+              break;
+
+            default:
+              // 兼容旧协议：type 缺失时当做 token
+              {
+                const legacy = evt as unknown as { token?: string; done?: boolean; full?: string };
+                if (legacy.token) {
+                  options.onToken(legacy.token);
+                }
+                if (legacy.done) {
+                  options.onDone(legacy.full ?? '');
+                  this.disconnect();
+                }
+              }
           }
-        } catch (parseErr) {
-          // 忽略非 JSON 数据（如注释行）
+        } catch (_parseErr) {
+          // 忽略非 JSON 数据
         }
       };
 
@@ -77,7 +118,6 @@ export class SSEClient {
 
   /**
    * 使用 fetch + ReadableStream 进行流式请求（备用方案）
-   * 适合 POST 请求携带 body 的场景
    */
   async connectWithFetch(
     _sessionId: string,
@@ -115,16 +155,30 @@ export class SSEClient {
           if (line.startsWith('data: ')) {
             const data = line.slice(6);
             try {
-              const chunk: SSEChunk = JSON.parse(data);
-              if (chunk.done) {
-                options.onDone(chunk.full ?? fullText);
-                return;
-              } else if (chunk.token) {
-                fullText += chunk.token;
-                options.onToken(chunk.token);
+              const evt: SSEEvent = JSON.parse(data);
+              switch (evt.type) {
+                case 'thinking':
+                  options.onThinking?.(evt.content ?? '');
+                  break;
+                case 'tool_start':
+                  options.onToolStart?.(evt.tool_name ?? '', evt.tool_input ?? '');
+                  break;
+                case 'tool_end':
+                  options.onToolEnd?.(evt.tool_name ?? '', evt.tool_output ?? '');
+                  break;
+                case 'text':
+                  fullText += (evt.content ?? '');
+                  options.onToken(evt.content ?? '');
+                  break;
+                case 'done':
+                  options.onDone(fullText);
+                  return;
+                case 'error':
+                  options.onError(evt.content ?? '');
+                  return;
               }
             } catch (_) {
-              // 忽略解析错误
+              // 忽略
             }
           }
         }
@@ -152,9 +206,6 @@ export class SSEClient {
     }
   }
 
-  /**
-   * 检查是否正在连接
-   */
   get isConnected(): boolean {
     return this.eventSource !== null && this.eventSource.readyState === EventSource.OPEN;
   }

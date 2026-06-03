@@ -35,7 +35,7 @@ class Settings(BaseSettings):
         description="Embedding 模型名称",
     )
     LLM_TEMPERATURE: float = Field(default=0.1, ge=0.0, le=2.0)
-    LLM_MAX_TOKENS: int = Field(default=4096, ge=256, le=32768)
+    LLM_MAX_TOKENS: int = Field(default=16384, ge=256, le=65536)
 
     # ---- 服务器 ----
     PORT: int = Field(default=8765, description="FastAPI 监听端口")
