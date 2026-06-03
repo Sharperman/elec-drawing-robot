@@ -7,6 +7,8 @@ import { Toaster } from 'react-hot-toast';
 import AppShell from '@/components/layout/AppShell';
 import AppSkeleton from '@/components/shared/AppSkeleton';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
+import ErrorBoundary from '@/components/shared/ErrorBoundary';
+import { useSettingsStore } from '@/stores/settingsStore';
 
 // 懒加载配置页
 const StandardsConfig = lazy(() => import('@/components/config/StandardsConfig'));
@@ -32,6 +34,7 @@ const App: React.FC = () => {
   }
 
   return (
+    <ErrorBoundary>
     <BrowserRouter>
       <Toaster
         position="top-center"
@@ -92,6 +95,7 @@ const App: React.FC = () => {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
+    </ErrorBoundary>
   );
 };
 
@@ -104,36 +108,22 @@ const AppShellWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) 
 // ─── 设置页 ─────────────────────────────────────────────────────
 
 const SettingsPage: React.FC = () => {
-  const [apiKey, setApiKey] = React.useState('');
-  const [baseUrl, setBaseUrl] = React.useState('');
-  const [modelName, setModelName] = React.useState('');
-  const [autocadVersion, setAutocadVersion] = React.useState('');
-  const [snapshotInterval, setSnapshotInterval] = React.useState(5);
+  const { settings, updateSettings } = useSettingsStore();
+  const [apiKey, setApiKey] = React.useState(settings?.openaiApiKey ?? '');
+  const [baseUrl, setBaseUrl] = React.useState(settings?.openaiBaseUrl ?? '');
+  const [modelName, setModelName] = React.useState(settings?.modelName ?? '');
+  const [autocadVersion, setAutocadVersion] = React.useState(settings?.autocadVersion ?? '');
+  const [snapshotInterval, setSnapshotInterval] = React.useState(settings?.snapshotInterval ?? 5);
   const [saved, setSaved] = React.useState(false);
 
-  React.useEffect(() => {
-    try {
-      const { useSettingsStore } = require('@/stores/settingsStore');
-      const st = useSettingsStore.getState();
-      setApiKey(st.settings?.openaiApiKey ?? '');
-      setBaseUrl(st.settings?.openaiBaseUrl ?? '');
-      setModelName(st.settings?.modelName ?? '');
-      setAutocadVersion(st.settings?.autocadVersion ?? '');
-      setSnapshotInterval(st.settings?.snapshotInterval ?? 5);
-    } catch { /* ignore */ }
-  }, []);
-
   const handleSave = () => {
-    try {
-      const { useSettingsStore } = require('@/stores/settingsStore');
-      useSettingsStore.getState().updateSettings({
-        openaiApiKey: apiKey,
-        openaiBaseUrl: baseUrl,
-        modelName,
-        autocadVersion,
-        snapshotInterval,
-      });
-    } catch { /* ignore */ }
+    updateSettings({
+      openaiApiKey: apiKey,
+      openaiBaseUrl: baseUrl,
+      modelName,
+      autocadVersion,
+      snapshotInterval,
+    });
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
