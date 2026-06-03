@@ -1,0 +1,123 @@
+[
+  {
+    "id": "TPL-001",
+    "name": "35kV 单母线分段系统图",
+    "category": "强电系统图",
+    "description": "35kV 单母线分段接线，含两路进线、母联断路器、PT柜、所用变",
+    "voltage_level": "35kV",
+    "elements": [
+      {"type": "母线", "name": "35kV I段母线", "layer": "ELEC-BUSBAR"},
+      {"type": "母线", "name": "35kV II段母线", "layer": "ELEC-BUSBAR"},
+      {"type": "断路器", "name": "进线断路器 QF1", "layer": "ELEC-PRIMARY", "params": {"rated_voltage": "40.5kV", "rated_current": "1250A"}},
+      {"type": "断路器", "name": "进线断路器 QF2", "layer": "ELEC-PRIMARY", "params": {"rated_voltage": "40.5kV", "rated_current": "1250A"}},
+      {"type": "断路器", "name": "母联断路器 QF3", "layer": "ELEC-PRIMARY", "params": {"rated_voltage": "40.5kV", "rated_current": "1250A"}},
+      {"type": "隔离开关", "name": "QS1-QS6", "layer": "ELEC-PRIMARY"},
+      {"type": "电压互感器", "name": "PT柜 TV1/TV2", "layer": "ELEC-SECONDARY"},
+      {"type": "避雷器", "name": "LA1-LA3", "layer": "ELEC-PRIMARY"}
+    ],
+    "layer_config": [
+      {"name": "ELEC-BUSBAR", "color": "red", "linetype": "Continuous", "lineweight": 0.5},
+      {"name": "ELEC-PRIMARY", "color": "white", "linetype": "Continuous", "lineweight": 0.35},
+      {"name": "ELEC-SECONDARY", "color": "cyan", "linetype": "Continuous", "lineweight": 0.25}
+    ]
+  },
+  {
+    "id": "TPL-002",
+    "name": "10kV 单母线接线系统图",
+    "category": "强电系统图",
+    "description": "10kV 单母线接线，含变压器出线、馈线回路、电容器组",
+    "voltage_level": "10kV",
+    "elements": [
+      {"type": "母线", "name": "10kV 母线", "layer": "ELEC-BUSBAR"},
+      {"type": "断路器", "name": "主变进线断路器 QF10", "layer": "ELEC-PRIMARY"},
+      {"type": "断路器", "name": "馈线断路器 QF11-QF18", "layer": "ELEC-PRIMARY"},
+      {"type": "断路器", "name": "电容器断路器 QFC1", "layer": "ELEC-PRIMARY"},
+      {"type": "电流互感器", "name": "TA1-TA8", "layer": "ELEC-SECONDARY"},
+      {"type": "避雷器", "name": "LA4-LA5", "layer": "ELEC-PRIMARY"},
+      {"type": "接地开关", "name": "ES1-ES2", "layer": "ELEC-PRIMARY"}
+    ],
+    "layer_config": [
+      {"name": "ELEC-BUSBAR", "color": "red", "linetype": "Continuous", "lineweight": 0.5},
+      {"name": "ELEC-PRIMARY", "color": "white", "linetype": "Continuous", "lineweight": 0.35},
+      {"name": "ELEC-SECONDARY", "color": "cyan", "linetype": "Continuous", "lineweight": 0.25}
+    ]
+  },
+  {
+    "id": "TPL-003",
+    "name": "风电场 35kV 集电线路图",
+    "category": "强电系统图",
+    "description": "风电场集电线路接线，含风机箱变汇集、集电线路开关柜、接地变",
+    "voltage_level": "35kV",
+    "elements": [
+      {"type": "母线", "name": "35kV 集电母线", "layer": "ELEC-BUSBAR"},
+      {"type": "断路器", "name": "集电线路断路器 QF21-QF28", "layer": "ELEC-PRIMARY"},
+      {"type": "变压器", "name": "箱变 T21-T28", "layer": "ELEC-PRIMARY", "params": {"capacity": "3300kVA", "ratio": "35/0.69kV"}},
+      {"type": "接地变压器", "name": "接地变 GT1", "layer": "ELEC-PRIMARY"},
+      {"type": "避雷器", "name": "LA6-LA8", "layer": "ELEC-PRIMARY"}
+    ],
+    "layer_config": [
+      {"name": "ELEC-BUSBAR", "color": "red", "linetype": "Continuous", "lineweight": 0.5},
+      {"name": "ELEC-PRIMARY", "color": "white", "linetype": "Continuous", "lineweight": 0.35},
+      {"name": "ELEC-WIND", "color": "green", "linetype": "Continuous", "lineweight": 0.25}
+    ]
+  },
+  {
+    "id": "TPL-004",
+    "name": "变电站平面布置图",
+    "category": "平面布置图",
+    "description": "110kV/35kV 变电站平面布置，含主变区、GIS室、开关柜室、控制室",
+    "voltage_level": "110kV",
+    "elements": [
+      {"type": "矩形区域", "name": "主变压器区", "layer": "LAYOUT-ZONE", "params": {"width": 20, "height": 15}},
+      {"type": "矩形区域", "name": "GIS 室", "layer": "LAYOUT-ZONE", "params": {"width": 25, "height": 10}},
+      {"type": "矩形区域", "name": "35kV 开关柜室", "layer": "LAYOUT-ZONE", "params": {"width": 15, "height": 10}},
+      {"type": "矩形区域", "name": "控制室", "layer": "LAYOUT-ZONE", "params": {"width": 10, "height": 8}},
+      {"type": "矩形区域", "name": "电容器区", "layer": "LAYOUT-ZONE", "params": {"width": 12, "height": 8}},
+      {"type": "矩形区域", "name": "站用变区", "layer": "LAYOUT-ZONE", "params": {"width": 6, "height": 6}}
+    ],
+    "layer_config": [
+      {"name": "LAYOUT-ZONE", "color": "yellow", "linetype": "Dashed", "lineweight": 0.3},
+      {"name": "LAYOUT-DIM", "color": "white", "linetype": "Continuous", "lineweight": 0.18},
+      {"name": "LAYOUT-TEXT", "color": "white", "linetype": "Continuous", "lineweight": 0.18}
+    ]
+  },
+  {
+    "id": "TPL-005",
+    "name": "二次接线图模板",
+    "category": "弱电系统图",
+    "description": "断路器控制回路、信号回路、测量回路二次接线",
+    "voltage_level": "DC 220V",
+    "elements": [
+      {"type": "断路器", "name": "控制开关 SA1", "layer": "ELEC-SECONDARY"},
+      {"type": "继电器", "name": "中间继电器 KA1-KA3", "layer": "ELEC-SECONDARY"},
+      {"type": "指示灯", "name": "合闸/分闸指示灯 HL1-HL2", "layer": "ELEC-SECONDARY"},
+      {"type": "端子排", "name": "端子排 X1", "layer": "ELEC-TERMINAL"},
+      {"type": "熔断器", "name": "控制回路熔断器 FU1-FU2", "layer": "ELEC-SECONDARY"}
+    ],
+    "layer_config": [
+      {"name": "ELEC-SECONDARY", "color": "cyan", "linetype": "Continuous", "lineweight": 0.25},
+      {"name": "ELEC-TERMINAL", "color": "magenta", "linetype": "Continuous", "lineweight": 0.25}
+    ]
+  },
+  {
+    "id": "TPL-006",
+    "name": "配电柜接线图模板",
+    "category": "接线图",
+    "description": "低压配电柜内部接线，含进线开关、馈线开关、母排、接地排",
+    "voltage_level": "0.4kV",
+    "elements": [
+      {"type": "断路器", "name": "进线断路器 QF-MAIN", "layer": "ELEC-PRIMARY", "params": {"rated_current": "2500A"}},
+      {"type": "断路器", "name": "馈线断路器 QF-L1~QF-L12", "layer": "ELEC-PRIMARY", "params": {"rated_current": "250A"}},
+      {"type": "母排", "name": "主母排", "layer": "ELEC-BUSBAR"},
+      {"type": "母排", "name": "接地排 PE", "layer": "ELEC-GROUND"},
+      {"type": "电流互感器", "name": "TA-MAIN", "layer": "ELEC-SECONDARY"},
+      {"type": "多功能表", "name": "仪表 PM1", "layer": "ELEC-SECONDARY"}
+    ],
+    "layer_config": [
+      {"name": "ELEC-BUSBAR", "color": "red", "linetype": "Continuous", "lineweight": 0.5},
+      {"name": "ELEC-PRIMARY", "color": "white", "linetype": "Continuous", "lineweight": 0.35},
+      {"name": "ELEC-GROUND", "color": "green", "linetype": "Continuous", "lineweight": 0.35},
+      {"name": "ELEC-SECONDARY", "color": "cyan", "linetype": "Continuous", "lineweight": 0.25}
+    ]
+  }
+]

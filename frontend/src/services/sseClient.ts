@@ -17,6 +17,8 @@ type ToolEndCallback = (toolName: string, toolOutput: string) => void;
 type ReportCallback = (reportPath: string) => void;
 /** 确认请求回调 */
 type ConfirmRequiredCallback = (plan: { summary: string; operations: Array<{ tool: string; description: string; params?: Record<string, unknown> }> }) => void;
+/** 自动校验回调 */
+type AutoReviewCallback = (result: { summary: string; issues: Array<{ severity: string; title: string; description: string; rule_id?: string }>; pass_count: number; total_checks: number; drawing_name?: string }) => void;
 
 interface SSEClientOptions {
   onToken: TokenCallback;
@@ -28,6 +30,7 @@ interface SSEClientOptions {
   onToolEnd?: ToolEndCallback;
   onReport?: ReportCallback;
   onConfirmRequired?: ConfirmRequiredCallback;
+  onAutoReview?: AutoReviewCallback;
 }
 
 export class SSEClient {
@@ -109,10 +112,21 @@ export class SSEClient {
                     options.onConfirmRequired?.(evt.plan);
                   }
                   break;
+                case 'auto_review':
+                  if (evt.result) {
+                    options.onAutoReview?.(evt.result);
+                  }
+                  break;
 
             case 'confirm_required':
               if (evt.plan) {
                 options.onConfirmRequired?.(evt.plan);
+              }
+              break;
+
+            case 'auto_review':
+              if (evt.result) {
+                options.onAutoReview?.(evt.result);
               }
               break;
 

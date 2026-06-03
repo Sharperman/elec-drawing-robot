@@ -12,6 +12,7 @@ import {
   PlusIcon, ChatBubbleLeftRightIcon, TrashIcon, Cog6ToothIcon,
   ChevronLeftIcon, BookOpenIcon, RectangleGroupIcon,
   MagnifyingGlassIcon, PencilIcon, XMarkIcon, CommandLineIcon,
+  SparklesIcon, Squares2X2Icon, DocumentArrowUpIcon,
 } from '@heroicons/react/24/outline';
 import { ChatBubbleLeftRightIcon as ChatBubbleLeftRightIconSolid } from '@heroicons/react/24/solid';
 
@@ -268,6 +269,10 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
     { icon: <BookOpenIcon className="w-5 h-5" />, label: '绘图规范', desc: 'GB/T 4728', path: '/standards' },
     { icon: <RectangleGroupIcon className="w-5 h-5" />, label: '图元符号库', desc: '20 个符号', path: '/symbols' },
     { icon: <CommandLineIcon className="w-5 h-5" />, label: '系统日志', desc: '后端日志', path: '/logs' },
+    { icon: <SparklesIcon className="w-5 h-5" />, label: '学习规则', desc: '用户偏好', path: '/feedback-rules' },
+    { icon: <Squares2X2Icon className="w-5 h-5" />, label: '图纸模板', desc: '6 个模板', path: '/templates' },
+    { icon: <PencilIcon className="w-5 h-5" />, label: '字体线型', desc: '全局配置', path: '/font-line' },
+    { icon: <DocumentArrowUpIcon className="w-5 h-5" />, label: '厂家资料', desc: '设备参数', path: '/vendor-docs' },
     { icon: <Cog6ToothIcon className="w-5 h-5" />, label: '设置', desc: 'LLM / CAD', path: '/settings' },
   ];
 

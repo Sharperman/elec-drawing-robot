@@ -14,6 +14,10 @@ import { useSettingsStore } from '@/stores/settingsStore';
 const StandardsConfig = lazy(() => import('@/components/config/StandardsConfig'));
 const SymbolLibrary = lazy(() => import('@/components/config/SymbolLibrary'));
 const LogViewer = lazy(() => import('@/components/shared/LogViewer'));
+const FeedbackRulesPage = lazy(() => import('@/components/config/FeedbackRulesPage'));
+const TemplateLibrary = lazy(() => import('@/components/config/TemplateLibrary'));
+const FontLineConfig = lazy(() => import('@/components/config/FontLineConfig'));
+const VendorDocParser = lazy(() => import('@/components/config/VendorDocParser'));
 
 const PageLoader: React.FC = () => (
   <div className="flex items-center justify-center h-full bg-gray-950">
@@ -99,6 +103,46 @@ const App: React.FC = () => {
             <AppShellWrapper>
               <Suspense fallback={<PageLoader />}>
                 <LogViewer />
+              </Suspense>
+            </AppShellWrapper>
+          }
+        />
+        <Route
+          path="/feedback-rules"
+          element={
+            <AppShellWrapper>
+              <Suspense fallback={<PageLoader />}>
+                <FeedbackRulesPage />
+              </Suspense>
+            </AppShellWrapper>
+          }
+        />
+        <Route
+          path="/templates"
+          element={
+            <AppShellWrapper>
+              <Suspense fallback={<PageLoader />}>
+                <TemplateLibrary />
+              </Suspense>
+            </AppShellWrapper>
+          }
+        />
+        <Route
+          path="/font-line"
+          element={
+            <AppShellWrapper>
+              <Suspense fallback={<PageLoader />}>
+                <FontLineConfig />
+              </Suspense>
+            </AppShellWrapper>
+          }
+        />
+        <Route
+          path="/vendor-docs"
+          element={
+            <AppShellWrapper>
+              <Suspense fallback={<PageLoader />}>
+                <VendorDocParser />
               </Suspense>
             </AppShellWrapper>
           }

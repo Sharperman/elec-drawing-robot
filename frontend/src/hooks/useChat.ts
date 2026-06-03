@@ -132,6 +132,32 @@ export function useChat() {
       onConfirmRequired: (plan) => {
         setPendingConfirm(plan);
       },
+      onAutoReview: (result) => {
+        // 自动校验结果通过 toast 提示
+        if (result.issues.length === 0) {
+          toast.success(`✅ 规范校验通过 (${result.pass_count}/${result.total_checks})`);
+        } else {
+          const errorCount = result.issues.filter(i => i.severity === 'error').length;
+          const warnCount = result.issues.filter(i => i.severity === 'warning').length;
+          if (errorCount > 0) {
+            toast.error(`⚠️ 发现 ${errorCount} 项不合规、${warnCount} 项建议改进`);
+          } else {
+            toast(`💡 ${result.summary}`, { icon: '⚠️' });
+          }
+          // 追加系统消息展示校验结果
+          const issuesText = result.issues.map(i =>
+            `- **${i.severity === 'error' ? '🔴' : i.severity === 'warning' ? '🟡' : '🔵'} ${i.title}**: ${i.description}${i.rule_id ? ` (${i.rule_id})` : ''}`
+          ).join('\n');
+          addMessage(currentSessionId!, {
+            id: Date.now(),
+            session_id: currentSessionId!,
+            role: 'system',
+            content: `📋 **自动规范校验结果**\n\n${result.summary}\n\n${issuesText}\n\n通过: ${result.pass_count}/${result.total_checks}`,
+            is_streaming: false,
+            created_at: new Date().toISOString(),
+          });
+        }
+      },
     }, mode);
   }, [
     currentSessionId, isLoading, isStreaming,
@@ -169,7 +195,7 @@ export function useChat() {
     if (!currentSessionId) return;
 
     try {
-      await apiClient.post('/api/chat/feedback', {
+      await apiClient.post('/api/feedback', {
         session_id: currentSessionId,
         message_id: messageId,
         feedback_type: type,

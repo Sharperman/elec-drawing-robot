@@ -91,7 +91,8 @@ export type SSEEventType =
   | 'done'
   | 'error'
   | 'report'
-  | 'confirm_required';
+  | 'confirm_required'
+  | 'auto_review';
 
 /** 单个 Agent 步骤（前端渲染用） */
 export interface AgentStep {
@@ -125,6 +126,19 @@ export interface SSEEvent {
       description: string;
       params?: Record<string, unknown>;
     }>;
+  };
+  /** 自动校验结果（type=auto_review 时） */
+  result?: {
+    summary: string;
+    issues: Array<{
+      severity: string;
+      title: string;
+      description: string;
+      rule_id?: string;
+    }>;
+    pass_count: number;
+    total_checks: number;
+    drawing_name?: string;
   };
 }
 

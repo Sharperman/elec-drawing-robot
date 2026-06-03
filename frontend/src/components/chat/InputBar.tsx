@@ -2,10 +2,11 @@
  * InputBar.tsx
  * 输入栏：运行模式选择器 + 聚焦发光 + 流式进度条 + 发送按钮动画 + 快捷指令
  */
-import React, { useState, useRef, useCallback, KeyboardEvent } from 'react';
+import React, { useState, useRef, useCallback, KeyboardEvent, useEffect } from 'react';
 import { clsx } from 'clsx';
-import { Send, Square, Paperclip, Command, X } from 'lucide-react';
+import { Send, Square, Paperclip, Command, X, Mic, MicOff } from 'lucide-react';
 import QuickCommandPanel from './QuickCommandPanel';
+import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import type { RunMode } from '@/types';
 
 interface InputBarProps {
@@ -44,6 +45,45 @@ const InputBar: React.FC<InputBarProps> = ({
       el.style.height = Math.min(el.scrollHeight, 160) + 'px';
     }
   }, []);
+
+  // 语音输入
+  const {
+    isListening,
+    transcript,
+    isSupported: voiceSupported,
+    startListening,
+    stopListening,
+  } = useSpeechRecognition();
+
+  // 语音文本同步到输入框
+  useEffect(() => {
+    if (isListening && transcript) {
+      setInput(transcript);
+      adjustHeight();
+    }
+  }, [transcript, isListening, adjustHeight]);
+
+  // 语音结束时自动发送
+  const handleVoiceToggle = () => {
+    if (isListening) {
+      const finalText = stopListening();
+      if (finalText) {
+        setInput(finalText);
+        // 自动发送
+        setTimeout(() => {
+          onSend(finalText, attachedImage || undefined, mode);
+          setInput('');
+          setAttachedImage(null);
+          setAttachedImageName('');
+          if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+          }
+        }, 300);
+      }
+    } else {
+      startListening();
+    }
+  };
 
   const handleSend = () => {
     if (!canSend) return;
@@ -236,21 +276,52 @@ const InputBar: React.FC<InputBarProps> = ({
             <Paperclip className="w-4 h-4" />
           </button>
 
+          {/* 语音按钮（P1-01） */}
+          {voiceSupported && (
+            <button
+              onClick={handleVoiceToggle}
+              disabled={isStreaming && !isListening}
+              className={clsx(
+                'p-1.5 rounded-lg transition-all flex-shrink-0 mb-0.5',
+                isListening
+                  ? 'text-red-400 bg-red-500/20 animate-pulse shadow-sm shadow-red-500/20'
+                  : 'text-gray-500 hover:text-gray-300 hover:bg-gray-700/50',
+                (isStreaming && !isListening) && 'opacity-40 cursor-not-allowed',
+              )}
+              title={isListening ? '松开停止录音' : '语音输入'}
+            >
+              {isListening ? (
+                <MicOff className="w-4 h-4" />
+              ) : (
+                <Mic className="w-4 h-4" />
+              )}
+            </button>
+          )}
+
           {/* 输入框 */}
           <textarea
             ref={textareaRef}
-            value={input}
+            value={isListening ? transcript : input}
             onChange={handleInput}
             onKeyDown={handleKeyDown}
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
-            placeholder={disabled ? '请先创建会话...' : '输入绘图指令，Enter 发送，Shift+Enter 换行...'}
+            placeholder={
+              isListening
+                ? '🎤 正在聆听...'
+                : disabled
+                  ? '请先创建会话...'
+                  : '输入绘图指令，Enter 发送，Shift+Enter 换行...'
+            }
             rows={1}
             disabled={disabled || isStreaming}
-            className="flex-1 bg-transparent resize-none text-sm text-gray-200
-                       placeholder-gray-600 outline-none py-1.5
-                       disabled:opacity-50 disabled:cursor-not-allowed
-                       min-h-[24px] max-h-[160px]"
+            className={clsx(
+              'flex-1 bg-transparent resize-none text-sm text-gray-200',
+              'placeholder-gray-600 outline-none py-1.5',
+              'disabled:opacity-50 disabled:cursor-not-allowed',
+              'min-h-[24px] max-h-[160px]',
+              isListening && 'placeholder-red-400/60',
+            )}
           />
 
           {/* 发送/停止按钮 */}

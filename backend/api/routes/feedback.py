@@ -62,3 +62,35 @@ async def trigger_refine(db: Session = Depends(get_db)) -> ApiResponse:
         message=f"提炼完成，新增 {len(new_rules)} 条规则",
         data={"new_rules_count": len(new_rules)},
     )
+
+
+@router.patch("/rules/{rule_id}", response_model=ApiResponse)
+async def update_rule(
+    rule_id: int,
+    body: dict,
+    db: Session = Depends(get_db),
+) -> ApiResponse:
+    """更新规则状态（启用/禁用）"""
+    from models.feedback import LearnedRule
+    rule = db.query(LearnedRule).filter_by(id=rule_id).first()
+    if not rule:
+        return ApiResponse(code=ErrorCode.NOT_FOUND, message="规则不存在")
+    if "is_active" in body:
+        rule.is_active = body["is_active"]
+    db.commit()
+    return ApiResponse(message="规则已更新")
+
+
+@router.delete("/rules/{rule_id}", response_model=ApiResponse)
+async def delete_rule(
+    rule_id: int,
+    db: Session = Depends(get_db),
+) -> ApiResponse:
+    """删除规则"""
+    from models.feedback import LearnedRule
+    rule = db.query(LearnedRule).filter_by(id=rule_id).first()
+    if not rule:
+        return ApiResponse(code=ErrorCode.NOT_FOUND, message="规则不存在")
+    db.delete(rule)
+    db.commit()
+    return ApiResponse(message="规则已删除")

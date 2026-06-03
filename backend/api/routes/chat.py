@@ -313,6 +313,20 @@ async def chat_stream(
                 except Exception as report_err:
                     logger.warning(f"Failed to generate review report: {report_err}")
 
+            # ── Draw 模式：自动规范校验（P1-05）──
+            if mode == "draw" and acad_connected and full_response:
+                try:
+                    review_result = await _auto_validate_after_draw(
+                        session_id=session_id,
+                        standards_context=standards_context,
+                        drawing_name=drawing_name,
+                        drawing_path=drawing_path,
+                    )
+                    if review_result:
+                        yield f"data: {json.dumps({'type': 'auto_review', 'result': review_result}, ensure_ascii=False)}\n\n"
+                except Exception as val_err:
+                    logger.warning(f"Auto-validate after draw failed: {val_err}")
+
             # 保存完整响应到数据库
             new_db = None
             try:
@@ -718,4 +732,90 @@ AutoCAD连接状态：{'已连接' if acad_connected else '未连接'}
 
     except Exception as e:
         logger.warning(f"Failed to analyze draw intent: {e}")
+        return None
+
+
+async def _auto_validate_after_draw(
+    session_id: str,
+    standards_context: str,
+    drawing_name: str,
+    drawing_path: str,
+) -> dict | None:
+    """
+    P1-05: Draw 模式完成后自动比对规范库，返回不合规项。
+
+    Args:
+        session_id: 会话 ID
+        standards_context: 规范上下文
+        drawing_name: 当前图纸名称
+        drawing_path: 图纸路径
+
+    Returns:
+        校验结果 dict，包含 issues 列表；失败返回 None
+    """
+    try:
+        from config import settings
+        from langchain_openai import ChatOpenAI
+        from autocad.connection import autocad_connection
+
+        # 获取图纸当前状态
+        snapshot = autocad_connection.get_snapshot()
+        drawing_info = autocad_connection.get_drawing_info() if hasattr(autocad_connection, 'get_drawing_info') else {}
+        entity_count = drawing_info.get('entity_count', '未知') if isinstance(drawing_info, dict) else '未知'
+
+        llm = ChatOpenAI(
+            model=settings.MODEL_NAME,
+            openai_api_key=settings.OPENAI_API_KEY,
+            openai_api_base=settings.OPENAI_BASE_URL,
+            temperature=0.1,
+            max_tokens=1200,
+        )
+
+        prompt = f"""你是一个电气图纸规范审查专家。刚完成一次 AutoCAD 绘图操作，请快速检查是否符合规范。
+
+图纸名称：{drawing_name or '未命名'}
+图元数量：{entity_count}
+
+规范要求（摘要）：
+{standards_context[:1500] if standards_context else '无特定规范要求'}
+
+请生成如下JSON（仅输出JSON，不要其他内容）：
+{{
+  "summary": "一句话总结校验结果（30字内）",
+  "issues": [
+    {{
+      "severity": "error/warning/info",
+      "title": "问题标题（20字内）",
+      "description": "问题描述与修改建议（50字内）",
+      "rule_id": "关联规则编号（如 STD-001）"
+    }}
+  ],
+  "pass_count": 0,
+  "total_checks": 0
+}}
+
+规则：
+- 如果无问题，issues 为空数组
+- severity: error(严重不合规) / warning(建议改进) / info(提示)
+- issues 最多5项，只报告确实存在的问题
+- pass_count 和 total_checks 为通过和总检查项数"""
+
+        from langchain_core.messages import HumanMessage
+        resp = await llm.ainvoke([HumanMessage(content=prompt)])
+        content = resp.content if hasattr(resp, 'content') else str(resp)
+
+        # 提取 JSON
+        import re
+        json_match = re.search(r'\{[\s\S]*\}', content)
+        if json_match:
+            result = json.loads(json_match.group())
+            if isinstance(result, dict) and 'summary' in result:
+                result['drawing_name'] = drawing_name
+                return result
+
+        logger.warning(f"Could not parse auto-validate result from: {content[:200]}")
+        return None
+
+    except Exception as e:
+        logger.warning(f"Auto-validate after draw failed: {e}")
         return None
