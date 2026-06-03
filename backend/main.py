@@ -13,7 +13,7 @@ from config import settings
 from utils.logger import setup_logger
 from models.session import create_all_tables
 from api.middleware import register_exception_handlers
-from api.routes import chat, recognition, autocad, standards, symbols, feedback
+from api.routes import chat, recognition, autocad, standards, symbols, feedback, logs
 
 # 初始化日志（最先执行）
 logger = setup_logger()
@@ -117,6 +117,7 @@ app.include_router(autocad.router, prefix="/api/autocad", tags=["AutoCAD"])
 app.include_router(standards.router, prefix="/api/standards", tags=["Standards"])
 app.include_router(symbols.router, prefix="/api/symbols", tags=["Symbols"])
 app.include_router(feedback.router, prefix="/api/feedback", tags=["Feedback"])
+app.include_router(logs.router, prefix="/api/logs", tags=["Logs"])
 
 
 # ============================================================

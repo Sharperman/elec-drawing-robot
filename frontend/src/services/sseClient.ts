@@ -30,6 +30,16 @@ interface SSEClientOptions {
 export class SSEClient {
   private eventSource: EventSource | null = null;
   private abortController: AbortController | null = null;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private reconnectAttempts: number = 0;
+  private maxReconnectAttempts: number = 5;
+  private reconnectDelayMs: number = 2000;
+  private lastConnectParams: {
+    sessionId: string;
+    message: string;
+    options: SSEClientOptions;
+    mode: string;
+  } | null = null;
 
   /**
    * 开始 SSE 流式对话
@@ -40,6 +50,9 @@ export class SSEClient {
     options: SSEClientOptions,
     mode: string = 'auto',
   ): void {
+    // 保存连接参数，用于重连
+    this.lastConnectParams = { sessionId, message, options, mode };
+
     this.disconnect();
 
     const params = new URLSearchParams({
@@ -75,6 +88,7 @@ export class SSEClient {
               break;
 
             case 'done':
+              this.reconnectAttempts = 0; // 成功完成，重置重连计数
               options.onDone('');
               this.disconnect();
               break;
@@ -107,8 +121,13 @@ export class SSEClient {
       };
 
       this.eventSource.onerror = (_event: Event) => {
-        options.onError('SSE 连接中断');
-        this.disconnect();
+        const es = this.eventSource;
+        if (es && es.readyState === EventSource.CLOSED) {
+          // 正常关闭，不重连
+          return;
+        }
+        // 尝试重连
+        this.tryReconnect();
       };
 
     } catch (err) {
@@ -196,6 +215,13 @@ export class SSEClient {
    * 断开 SSE 连接
    */
   disconnect(): void {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    this.lastConnectParams = null;
+    this.reconnectAttempts = 0;
+
     if (this.eventSource) {
       this.eventSource.close();
       this.eventSource = null;
@@ -204,6 +230,31 @@ export class SSEClient {
       this.abortController.abort();
       this.abortController = null;
     }
+  }
+
+  /**
+   * 尝试重新连接（指数退避）
+   */
+  private tryReconnect(): void {
+    if (!this.lastConnectParams) return;
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      this.lastConnectParams.options.onError(
+        `SSE 连接中断，已重试 ${this.maxReconnectAttempts} 次，请刷新页面重试`
+      );
+      return;
+    }
+
+    this.reconnectAttempts += 1;
+    const delay = this.reconnectDelayMs * Math.pow(1.5, this.reconnectAttempts - 1);
+    const { sessionId, message, options, mode } = this.lastConnectParams;
+
+    options.onError(`连接中断，${Math.round(delay / 1000)}秒后自动重连（${this.reconnectAttempts}/${this.maxReconnectAttempts}）`);
+
+    this.reconnectTimer = setTimeout(() => {
+      if (!this.lastConnectParams) return;
+      // 用 fetch 方案重连（EventSource 不支持自定义 header，但 GET 足够）
+      this.connect(sessionId, message, options, mode);
+    }, delay);
   }
 
   get isConnected(): boolean {

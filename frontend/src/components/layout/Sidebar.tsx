@@ -11,7 +11,7 @@ import { useChatStore } from '@/stores/chatStore';
 import {
   PlusIcon, ChatBubbleLeftRightIcon, TrashIcon, Cog6ToothIcon,
   ChevronLeftIcon, BookOpenIcon, RectangleGroupIcon,
-  MagnifyingGlassIcon, PencilIcon, XMarkIcon,
+  MagnifyingGlassIcon, PencilIcon, XMarkIcon, CommandLineIcon,
 } from '@heroicons/react/24/outline';
 import { ChatBubbleLeftRightIcon as ChatBubbleLeftRightIconSolid } from '@heroicons/react/24/solid';
 
@@ -267,6 +267,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
   const navItems = [
     { icon: <BookOpenIcon className="w-5 h-5" />, label: '绘图规范', desc: 'GB/T 4728', path: '/standards' },
     { icon: <RectangleGroupIcon className="w-5 h-5" />, label: '图元符号库', desc: '20 个符号', path: '/symbols' },
+    { icon: <CommandLineIcon className="w-5 h-5" />, label: '系统日志', desc: '后端日志', path: '/logs' },
     { icon: <Cog6ToothIcon className="w-5 h-5" />, label: '设置', desc: 'LLM / CAD', path: '/settings' },
   ];
 

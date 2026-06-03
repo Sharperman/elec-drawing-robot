@@ -11,6 +11,7 @@ import InputBar from './InputBar';
 import { useChat } from '@/hooks/useChat';
 import { useSessionStore } from '@/stores/sessionStore';
 import { useConnectionStore } from '@/stores/connectionStore';
+import { useChatStore } from '@/stores/chatStore';
 import type { RunMode } from '@/types';
 
 const ChatPanel: React.FC = () => {
@@ -24,6 +25,13 @@ const ChatPanel: React.FC = () => {
     agentSteps, reportPath: storeReportPath,
     sendMessage, stopStreaming, loadHistory, regenerateMessage, sendFeedback,
   } = useChat();
+
+  // 刷新后从后端加载消息历史
+  useEffect(() => {
+    if (currentSessionId && messages.length === 0) {
+      loadHistory(currentSessionId);
+    }
+  }, [currentSessionId, loadHistory]);
 
   // 同步 reportPath 到本地 state
   useEffect(() => {
@@ -45,7 +53,7 @@ const ChatPanel: React.FC = () => {
 
   const handleClearChat = () => {
     if (currentSessionId) {
-      const { setMessages } = require('@/stores/chatStore').useChatStore.getState();
+      const { setMessages } = useChatStore.getState();
       setMessages(currentSessionId, []);
     }
     setShowMenu(false);

@@ -13,6 +13,7 @@ import { useSettingsStore } from '@/stores/settingsStore';
 // 懒加载配置页
 const StandardsConfig = lazy(() => import('@/components/config/StandardsConfig'));
 const SymbolLibrary = lazy(() => import('@/components/config/SymbolLibrary'));
+const LogViewer = lazy(() => import('@/components/shared/LogViewer'));
 
 const PageLoader: React.FC = () => (
   <div className="flex items-center justify-center h-full bg-gray-950">
@@ -89,6 +90,16 @@ const App: React.FC = () => {
           element={
             <AppShellWrapper>
               <SettingsPage />
+            </AppShellWrapper>
+          }
+        />
+        <Route
+          path="/logs"
+          element={
+            <AppShellWrapper>
+              <Suspense fallback={<PageLoader />}>
+                <LogViewer />
+              </Suspense>
             </AppShellWrapper>
           }
         />
