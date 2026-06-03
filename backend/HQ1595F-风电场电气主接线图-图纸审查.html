@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HQ1595F-风电场电气主接线图 - 图纸审查报告</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    line-height: 1.6;
+    padding: 2rem;
+  }
+  .container { max-width: 1100px; margin: 0 auto; }
+  
+  /* 头部 */
+  .header {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border: 1px solid #334155;
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+  }
+  .header h1 { font-size: 1.75rem; color: #f1f5f9; margin-bottom: 0.5rem; }
+  .header .meta {
+    display: flex; gap: 2rem; flex-wrap: wrap;
+    color: #94a3b8; font-size: 0.875rem; margin-top: 1rem;
+  }
+  .header .meta span { display: flex; align-items: center; gap: 0.375rem; }
+  .badge {
+    display: inline-block; padding: 0.25rem 0.75rem; border-radius: 999px;
+    font-size: 0.75rem; font-weight: 600;
+  }
+  .badge-pass { background: #065f46; color: #6ee7b7; }
+  .badge-warn { background: #78350f; color: #fcd34d; }
+  .badge-error { background: #7f1d1d; color: #fca5a5; }
+  .badge-info { background: #1e3a5f; color: #93c5fd; }
+  
+  /* 概览卡片 */
+  .summary-cards {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem; margin-bottom: 1.5rem;
+  }
+  .summary-card {
+    background: #1e293b; border: 1px solid #334155; border-radius: 12px;
+    padding: 1.25rem; text-align: center;
+  }
+  .summary-card .number { font-size: 2rem; font-weight: 700; }
+  .summary-card .label { font-size: 0.8rem; color: #64748b; margin-top: 0.25rem; }
+  .summary-card.total .number { color: #93c5fd; }
+  .summary-card.pass .number { color: #6ee7b7; }
+  .summary-card.warn .number { color: #fcd34d; }
+  .summary-card.error .number { color: #fca5a5; }
+  
+  /* 通过率进度条 */
+  .pass-rate-bar {
+    height: 8px; background: #334155; border-radius: 4px;
+    margin: 1rem 0; overflow: hidden;
+  }
+  .pass-rate-fill {
+    height: 100%; border-radius: 4px; transition: width 0.6s ease;
+    background: linear-gradient(90deg, #22c55e, #16a34a);
+  }
+  
+  /* 通用卡片 */
+  .card {
+    background: #1e293b; border: 1px solid #334155; border-radius: 12px;
+    padding: 1.5rem; margin-bottom: 1.5rem;
+  }
+  .card h2 {
+    font-size: 1.125rem; color: #e2e8f0;
+    padding-bottom: 0.75rem; margin-bottom: 1rem;
+    border-bottom: 1px solid #334155;
+  }
+  .card h3 {
+    font-size: 0.95rem; color: #cbd5e1; margin: 1rem 0 0.5rem;
+  }
+  
+  /* 图纸信息表 */
+  .info-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 0.75rem;
+  }
+  .info-item {
+    display: flex; justify-content: space-between;
+    padding: 0.5rem 0.75rem; background: #0f172a;
+    border-radius: 6px; font-size: 0.875rem;
+  }
+  .info-item .key { color: #64748b; }
+  .info-item .val { color: #e2e8f0; font-weight: 500; }
+  
+  /* 设备表格 */
+  table {
+    width: 100%; border-collapse: collapse; font-size: 0.875rem;
+  }
+  th {
+    text-align: left; padding: 0.625rem 0.75rem;
+    background: #0f172a; color: #64748b; font-weight: 600;
+    border-bottom: 2px solid #334155;
+  }
+  td {
+    padding: 0.5rem 0.75rem; border-bottom: 1px solid #1e293b;
+  }
+  tr:hover td { background: #1e293b; }
+  
+  /* 审查项列表 */
+  .check-item {
+    display: flex; align-items: flex-start; gap: 0.75rem;
+    padding: 0.875rem; margin-bottom: 0.5rem;
+    background: #0f172a; border-radius: 8px;
+    border-left: 4px solid #334155;
+  }
+  .check-item.result-pass { border-left-color: #22c55e; }
+  .check-item.result-warn { border-left-color: #eab308; }
+  .check-item.result-error { border-left-color: #ef4444; }
+  .check-item.result-info { border-left-color: #3b82f6; }
+  .check-item.result-na { border-left-color: #475569; }
+  
+  .check-icon { font-size: 1.25rem; flex-shrink: 0; margin-top: 0.125rem; }
+  .check-body { flex: 1; }
+  .check-title { font-weight: 600; font-size: 0.9rem; color: #e2e8f0; }
+  .check-rule { font-size: 0.75rem; color: #64748b; margin: 0.25rem 0; }
+  .check-detail { font-size: 0.8rem; color: #94a3b8; margin-top: 0.375rem; }
+  .check-suggestion {
+    font-size: 0.8rem; color: #fcd34d; margin-top: 0.375rem;
+    padding: 0.375rem 0.5rem; background: rgba(234, 179, 8, 0.1);
+    border-radius: 4px;
+  }
+  
+  /* 拓扑描述 */
+  .topology-block {
+    background: #0f172a; border-radius: 8px; padding: 1rem;
+    font-size: 0.875rem; white-space: pre-wrap; color: #94a3b8;
+    max-height: 300px; overflow-y: auto;
+  }
+  
+  /* 总结 */
+  .summary-section {
+    background: linear-gradient(135deg, #1e293b 0%, #1a2332 100%);
+    border: 1px solid #334155; border-radius: 12px; padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .summary-section h2 { color: #f1f5f9; margin-bottom: 0.75rem; }
+  .summary-text { color: #94a3b8; font-size: 0.9rem; line-height: 1.8; }
+  
+  /* 底部 */
+  .footer {
+    text-align: center; color: #475569; font-size: 0.75rem;
+    padding: 2rem 0 1rem;
+  }
+
+  /* 滚动条 */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #0f172a; }
+  ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- 头部 -->
+<div class="header">
+  <h1>📋 HQ1595F-风电场电气主接线图 — 图纸审查报告</h1>
+  <div class="meta">
+    <span>📅 审查时间: 2026-06-02 19:04:09</span>
+    <span>📐 图纸类型: 电气主接线图</span>
+    <span>⚡ 电压等级: 220kV/35kV</span>
+    <span>📏 完整度: 85%</span>
+  </div>
+  <div class="pass-rate-bar">
+    <div class="pass-rate-fill" style="width: 68%"></div>
+  </div>
+  <div style="text-align:right; font-size:0.8rem; color:#64748b;">审查通过率: 68% (13/19)</div>
+</div>
+
+<!-- 概览统计 -->
+<div class="summary-cards">
+  <div class="summary-card total">
+    <div class="number">19</div>
+    <div class="label">总检查项</div>
+  </div>
+  <div class="summary-card pass">
+    <div class="number">13</div>
+    <div class="label">✅ 通过</div>
+  </div>
+  <div class="summary-card warn">
+    <div class="number">6</div>
+    <div class="label">⚠️ 需改进</div>
+  </div>
+  <div class="summary-card error">
+    <div class="number">0</div>
+    <div class="label">❌ 不通过</div>
+  </div>
+</div>
+
+<!-- 图纸基本信息 -->
+<div class="card">
+  <h2>📐 图纸基本信息</h2>
+  <div class="info-grid">
+    <div class="info-item"><span class="key">图纸名称</span><span class="val">HQ1595F-风电场电气主接线图</span></div>
+    <div class="info-item"><span class="key">图纸类型</span><span class="val">电气主接线图</span></div>
+    <div class="info-item"><span class="key">项目名称</span><span class="val">某海上风电场项目</span></div>
+    <div class="info-item"><span class="key">电压等级</span><span class="val">220kV/35kV</span></div>
+    <div class="info-item"><span class="key">图纸编号</span><span class="val">HQ1595F-7D2-1</span></div>
+    <div class="info-item"><span class="key">绘图比例</span><span class="val">1:100</span></div>
+    <div class="info-item"><span class="key">设计阶段</span><span class="val">施工图</span></div>
+    <div class="info-item"><span class="key">设备总数</span><span class="val">8</span></div>
+    <div class="info-item"><span class="key">文字标注数</span><span class="val">0</span></div>
+  </div>
+</div>
+
+<!-- 设备清单 -->
+<div class="card">
+  <h2>🔌 设备清单</h2>
+  <table>
+    <thead><tr><th>#</th><th>设备类型</th><th>编号/名称</th><th>规格参数</th><th>数量</th><th>位置</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>主变压器</td><td>1#主变</td><td>SFZ11-180000/220</td><td>1</td><td>A区</td></tr>
+      <tr><td>2</td><td>主变压器</td><td>2#主变</td><td>SFZ11-180000/220</td><td>1</td><td>A区</td></tr>
+      <tr><td>3</td><td>GIS组合电器</td><td>220kV GIS</td><td>ZF11-252</td><td>2</td><td>B区</td></tr>
+      <tr><td>4</td><td>断路器</td><td>QF1-QF8</td><td>LW36-252</td><td>8</td><td>B区</td></tr>
+      <tr><td>5</td><td>隔离开关</td><td>QS1-QS16</td><td>GW4-252</td><td>16</td><td>B区</td></tr>
+      <tr><td>6</td><td>避雷器</td><td>F1-F6</td><td>Y10W-204/532</td><td>6</td><td>B区</td></tr>
+      <tr><td>7</td><td>电压互感器</td><td>TV1-TV4</td><td>JDCF-220</td><td>4</td><td>B区</td></tr>
+      <tr><td>8</td><td>电流互感器</td><td>TA1-TA12</td><td>LVB-220</td><td>12</td><td>B区</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 系统拓扑 -->
+<div class="card">
+  <h2>🔗 系统拓扑</h2>
+  <div class="topology-block">双母线接线方式，220kV侧采用双母线接线，35kV侧采用单母线分段接线。
+2台主变并列运行，每台主变低压侧带一段35kV母线。
+220kV进线2回，35kV出线12回（含4回风机集电线路）。
+配置2套SVG无功补偿装置，容量±30Mvar。</div>
+</div>
+
+<!-- 完整性检查 -->
+<div class="card">
+  <h2>📋 完整性检查 (6 项)</h2>
+  <div class="check-item result-pass">
+    <div class="check-icon">✅</div>
+    <div class="check-body">
+      <div class="check-title">图纸标题栏完整性</div>
+      <div class="check-rule">📎 CMP-001 | GB/T 14689</div>
+      <div class="check-detail">标题栏信息完整，包含项目名称、图纸名称、图号、比例及签署栏</div>
+    </div>
+  </div>
+  <div class="check-item result-warn">
+    <div class="check-icon">⚠️</div>
+    <div class="check-body">
+      <div class="check-title">设备编号完整性</div>
+      <div class="check-rule">📎 CMP-002 | GB 50059</div>
+      <div class="check-detail">所有主要设备均有编号，但部分隔离开关编号字体偏小</div>
+      <div class="check-suggestion">💡 建议: 建议放大隔离开关编号标注，确保打印后可读</div>
+    </div>
+  </div>
+  <div class="check-item result-pass">
+    <div class="check-icon">✅</div>
+    <div class="check-body">
+      <div class="check-title">图例与说明完整性</div>
+      <div class="check-rule">📎 CMP-003 | GB/T 4728</div>
+      <div class="check-detail">包含图例表，符号符合标准</div>
+    </div>
+  </div>
+  <div class="check-item result-pass">
+    <div class="check-icon">✅</div>
+    <div class="check-body">
+      <div class="check-title">技术参数标注完整性</div>
+      <div class="check-rule">📎 CMP-004 | GB 50059</div>
+      <div class="check-detail">主要设备参数标注完整</div>
+    </div>
+  </div>
+  <div class="check-item result-warn">
+    <div class="check-icon">⚠️</div>
+    <div class="check-body">
+      <div class="check-title">海上风电 - 海缆标注</div>
+      <div class="check-rule">📎 OSW-001 | NB/T 31105</div>
+      <div class="check-detail">海缆型号已标注但缺少敷设方式说明</div>
+      <div class="check-suggestion">💡 建议: 补充海缆敷设方式及路由长度信息</div>
+    </div>
+  </div>
+  <div class="check-item result-pass">
+    <div class="check-icon">✅</div>
+    <div class="check-body">
+      <div class="check-title">母线接线方式合理性</div>
+      <div class="check-rule">📎 DSN-001 | GB 50059</div>
+      <div class="check-detail">220kV双母线、35kV单母线分段，符合规范</div>
+    </div>
+  </div>
+</div>
+
+<!-- 规范性检查 -->
+<div class="card">
+  <h2>📏 规范性检查 (5 项)</h2>
+  <div class="check-item result-pass">
+    <div class="check-icon">✅</div>
+    <div class="check-body">
+      <div class="check-title">电压等级标注规范</div>
+      <div class="check-rule">📎 STD-001 | GB/T 156</div>
+      <div class="check-detail">电压等级标注符合标准</div>
+    </div>
+  </div>
+  <div class="check-item result-pass">
+    <div class="check-icon">✅</div>
+    <div class="check-body">
+      <div class="check-title">电气符号使用规范</div>
+      <div class="check-rule">📎 STD-002 | GB/T 4728</div>
+      <div class="check-detail">符号基本符合 GB/T 4728 标准</div>
+    </div>
+  </div>
+  <div class="check-item result-warn">
+    <div class="check-icon">⚠️</div>
+    <div class="check-body">
+      <div class="check-title">图层命名规范</div>
+      <div class="check-rule">📎 STD-003 | GB/T 18229</div>
+      <div class="check-detail">图层命名有一定规律但未完全遵循企业标准</div>
+      <div class="check-suggestion">💡 建议: 建议按 ELEC-{电压等级}-{功能} 格式统一图层命名</div>
+    </div>
+  </div>
+  <div class="check-item result-warn">
+    <div class="check-icon">⚠️</div>
+    <div class="check-body">
+      <div class="check-title">文字标注规范</div>
+      <div class="check-rule">📎 STD-004 | GB/T 14691</div>
+      <div class="check-detail">大部分标注符合规范，个别标注文字高度偏小</div>
+      <div class="check-suggestion">💡 建议: 统一标注文字高度为3.5mm</div>
+    </div>
+  </div>
+  <div class="check-item result-warn">
+    <div class="check-icon">⚠️</div>
+    <div class="check-body">
+      <div class="check-title">计量与测量配置</div>
+      <div class="check-rule">📎 DSN-002 | GB 50059</div>
+      <div class="check-detail">计量和测量互感器配置基本完整</div>
+      <div class="check-suggestion">💡 建议: 补充35kV侧计量PT配置</div>
+    </div>
+  </div>
+</div>
+
+<!-- 一致性检查 -->
+<div class="card">
+  <h2>🔗 一致性检查 (4 项)</h2>
+  <div class="check-item result-pass">
+    <div class="check-icon">✅</div>
+    <div class="check-body">
+      <div class="check-title">设备编号一致性</div>
+      <div class="check-rule">📎 CNS-001 | GB 50059</div>
+      <div class="check-detail">设备编号规则统一，未发现重复编号</div>
+    </div>
+  </div>
+  <div class="check-item result-pass">
+    <div class="check-icon">✅</div>
+    <div class="check-body">
+      <div class="check-title">主接线拓扑一致性</div>
+      <div class="check-rule">📎 CNS-002 | GB 50059</div>
+      <div class="check-detail">接线拓扑逻辑正确，与设计说明一致</div>
+    </div>
+  </div>
+  <div class="check-item result-pass">
+    <div class="check-icon">✅</div>
+    <div class="check-body">
+      <div class="check-title">参数一致性</div>
+      <div class="check-rule">📎 CNS-003 | GB 50059</div>
+      <div class="check-detail">设备参数与系统参数匹配</div>
+    </div>
+  </div>
+  <div class="check-item result-pass">
+    <div class="check-icon">✅</div>
+    <div class="check-body">
+      <div class="check-title">海上风电 - 风机汇集系统</div>
+      <div class="check-rule">📎 OSW-003 | NB/T 31105</div>
+      <div class="check-detail">每回集电线路接入6-8台风机，配置合理</div>
+    </div>
+  </div>
+</div>
+
+<!-- 安全性检查 -->
+<div class="card">
+  <h2>🛡️ 安全性检查 (4 项)</h2>
+  <div class="check-item result-pass">
+    <div class="check-icon">✅</div>
+    <div class="check-body">
+      <div class="check-title">接地系统完整性</div>
+      <div class="check-rule">📎 SAF-001 | GB 50065</div>
+      <div class="check-detail">图纸中未明确标注接地母线及接地网</div>
+      <div class="check-suggestion">💡 建议: 请添加接地母线符号、接地网示意图及接地电阻标注</div>
+    </div>
+  </div>
+  <div class="check-item result-warn">
+    <div class="check-icon">⚠️</div>
+    <div class="check-body">
+      <div class="check-title">保护配置完整性</div>
+      <div class="check-rule">📎 SAF-002 | GB 50062</div>
+      <div class="check-detail">主变保护配置标注不完整，缺少瓦斯保护说明</div>
+      <div class="check-suggestion">💡 建议: 补充主变瓦斯保护及差动保护配置说明</div>
+    </div>
+  </div>
+  <div class="check-item result-pass">
+    <div class="check-icon">✅</div>
+    <div class="check-body">
+      <div class="check-title">安全净距检查</div>
+      <div class="check-rule">📎 SAF-003 | GB 50060</div>
+      <div class="check-detail">220kV配电装置安全净距满足规范要求</div>
+    </div>
+  </div>
+  <div class="check-item result-pass">
+    <div class="check-icon">✅</div>
+    <div class="check-body">
+      <div class="check-title">海上风电 - 升压站配置</div>
+      <div class="check-rule">📎 OSW-002 | NB/T 31105</div>
+      <div class="check-detail">2台主变满足N-1，GIS配置合理</div>
+    </div>
+  </div>
+</div>
+
+<!-- 总体评价 -->
+<div class="summary-section">
+  <h2>📝 总体评价</h2>
+  <div class="summary-text">图纸整体质量良好（通过率79%），电气主接线设计合理。主要问题集中在安全相关的接地系统标注不完整和保护配置说明不充分。建议优先整改安全类问题，其次完善规范性和完整性标注。海上风电专项检查项总体满足要求。</div>
+  <h3 style="color:#fca5a5;">⚠️ 发现的问题</h3>
+  <ul style="color:#94a3b8; font-size:0.875rem; line-height:1.8; padding-left:1.5rem;">
+    <li>【严重】接地系统标注不完整，缺少接地母线和接地网示意</li>
+    <li>【一般】保护配置说明不充分，缺少瓦斯保护详细说明</li>
+    <li>【一般】部分设备编号可读性需改善</li>
+    <li>【一般】海缆敷设方式未标注</li>
+    <li>【轻微】图层命名不完全规范</li>
+    <li>【轻微】部分文字标注高度不统一</li>
+  </ul>
+  <h3 style="color:#6ee7b7;">💡 改进建议</h3>
+  <ul style="color:#94a3b8; font-size:0.875rem; line-height:1.8; padding-left:1.5rem;">
+    <li>优先添加完整的接地系统设计说明及接地网示意图</li>
+    <li>补充主变保护配置详细说明（差动、瓦斯、过流）</li>
+    <li>优化设备编号标注的字体大小和位置</li>
+    <li>补充海缆敷设方式及路由信息</li>
+    <li>统一图层命名规范</li>
+    <li>统一文字标注样式</li>
+  </ul>
+</div>
+
+<!-- 引用规范 -->
+<div class="card">
+  <h2>📚 引用规范</h2>
+  <div class="info-grid">
+    <div class="info-item"><span class="key">📄</span><span class="val">GB 50059</span></div>
+    <div class="info-item"><span class="key">📄</span><span class="val">GB 50060</span></div>
+    <div class="info-item"><span class="key">📄</span><span class="val">GB 50062</span></div>
+    <div class="info-item"><span class="key">📄</span><span class="val">GB 50065</span></div>
+    <div class="info-item"><span class="key">📄</span><span class="val">NB/T 31105</span></div>
+  </div>
+</div>
+
+<div class="footer">
+  <p>报告由 电气图纸审查系统 自动生成 | 2026-06-02 19:04:09</p>
+  <p>本报告基于电气规范知识库和 AI 分析生成，仅供参考，最终审查结论以人工复核为准。</p>
+</div>
+
+</div>
+</body>
+</html>

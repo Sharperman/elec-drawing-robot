@@ -90,7 +90,8 @@ export type SSEEventType =
   | 'text'
   | 'done'
   | 'error'
-  | 'report';
+  | 'report'
+  | 'confirm_required';
 
 /** 单个 Agent 步骤（前端渲染用） */
 export interface AgentStep {
@@ -116,6 +117,15 @@ export interface SSEEvent {
   tool_output?: string;
   /** 审查报告路径（type=report 时） */
   path?: string;
+  /** 确认计划内容（type=confirm_required 时） */
+  plan?: {
+    summary: string;
+    operations: Array<{
+      tool: string;
+      description: string;
+      params?: Record<string, unknown>;
+    }>;
+  };
 }
 
 // ============================================================

@@ -15,6 +15,8 @@ type ToolStartCallback = (toolName: string, toolInput: string) => void;
 type ToolEndCallback = (toolName: string, toolOutput: string) => void;
 /** 审查报告回调 */
 type ReportCallback = (reportPath: string) => void;
+/** 确认请求回调 */
+type ConfirmRequiredCallback = (plan: { summary: string; operations: Array<{ tool: string; description: string; params?: Record<string, unknown> }> }) => void;
 
 interface SSEClientOptions {
   onToken: TokenCallback;
@@ -25,6 +27,7 @@ interface SSEClientOptions {
   onToolStart?: ToolStartCallback;
   onToolEnd?: ToolEndCallback;
   onReport?: ReportCallback;
+  onConfirmRequired?: ConfirmRequiredCallback;
 }
 
 export class SSEClient {
@@ -98,8 +101,19 @@ export class SSEClient {
               this.disconnect();
               break;
 
-            case 'report':
-              options.onReport?.(evt.path ?? '');
+                case 'report':
+                  options.onReport?.(evt.path ?? '');
+                  break;
+                case 'confirm_required':
+                  if (evt.plan) {
+                    options.onConfirmRequired?.(evt.plan);
+                  }
+                  break;
+
+            case 'confirm_required':
+              if (evt.plan) {
+                options.onConfirmRequired?.(evt.plan);
+              }
               break;
 
             default:

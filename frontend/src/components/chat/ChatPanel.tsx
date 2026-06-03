@@ -8,6 +8,7 @@ import { MessageSquare, RefreshCw, Trash2, Download, ChevronDown, FileText } fro
 import { clsx } from 'clsx';
 import MessageList from './MessageList';
 import InputBar from './InputBar';
+import ConfirmCard from './ConfirmCard';
 import { useChat } from '@/hooks/useChat';
 import { useSessionStore } from '@/stores/sessionStore';
 import { useConnectionStore } from '@/stores/connectionStore';
@@ -22,8 +23,9 @@ const ChatPanel: React.FC = () => {
 
   const {
     messages, streamingMessage, isLoading, isStreaming, error,
-    agentSteps, reportPath: storeReportPath,
+    agentSteps, reportPath: storeReportPath, pendingConfirm,
     sendMessage, stopStreaming, loadHistory, regenerateMessage, sendFeedback,
+    confirmPlan,
   } = useChat();
 
   // 刷新后从后端加载消息历史
@@ -184,6 +186,16 @@ const ChatPanel: React.FC = () => {
         <div className="mx-3 mb-2 px-3 py-2 bg-red-900/20 border border-red-800/50 rounded-lg text-xs text-red-400">
           ⚠️ {error}
         </div>
+      )}
+
+      {/* 确认预览卡片（Draw 模式下出现） */}
+      {pendingConfirm && (
+        <ConfirmCard
+          plan={pendingConfirm}
+          onConfirm={() => confirmPlan(true)}
+          onCancel={() => confirmPlan(false)}
+          isLoading={isLoading}
+        />
       )}
 
       {/* 输入栏 */}

@@ -2,7 +2,7 @@
  * useChat Hook - 发送指令、SSE 流、确认执行、重新生成、反馈
  * 支持新的结构化 Agent 步骤事件
  */
-import { useCallback } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 
 import apiClient from '@/services/apiClient';
@@ -11,7 +11,26 @@ import { useChatStore } from '@/stores/chatStore';
 import { useSessionStore } from '@/stores/sessionStore';
 import type { Message, ChatConfirmRequest, RunMode } from '@/types';
 
+/** 确认计划数据结构 */
+export interface PendingConfirmPlan {
+  summary: string;
+  operations: Array<{
+    tool: string;
+    description: string;
+    params?: Record<string, unknown>;
+  }>;
+}
+
+/** 最后发送的消息参数（用于确认后重发） */
+interface LastSendParams {
+  message: string;
+  imageData?: string;
+  mode: RunMode;
+}
+
 export function useChat() {
+  const [pendingConfirm, setPendingConfirm] = useState<PendingConfirmPlan | null>(null);
+  const lastSendParamsRef = useRef<LastSendParams | null>(null);
   const {
     getMessages,
     addMessage,
@@ -78,6 +97,10 @@ export function useChat() {
     };
     addMessage(currentSessionId, userMsg);
     startStreaming(currentSessionId);
+    setPendingConfirm(null);
+
+    // 保存发送参数，用于确认后重发
+    lastSendParamsRef.current = { message, imageData, mode };
 
     // 开始 SSE 流式对话（新协议）
     sseClient.connect(currentSessionId, message, {
@@ -105,6 +128,9 @@ export function useChat() {
       onReport: (reportPathFromServer) => {
         setReportPath(reportPathFromServer);
         toast.success('📋 图纸审查报告已生成');
+      },
+      onConfirmRequired: (plan) => {
+        setPendingConfirm(plan);
       },
     }, mode);
   }, [
@@ -168,8 +194,17 @@ export function useChat() {
 
       if (confirm) {
         toast.success('操作计划已确认执行');
+        // 清除确认状态
+        setPendingConfirm(null);
+        // 重新发送消息（后端会识别已确认并直接执行工具）
+        const params = lastSendParamsRef.current;
+        if (params) {
+          // 用 draw_confirmed 模式重发，让后端跳过确认环节
+          sendMessage(params.message, params.imageData, 'draw' as RunMode);
+        }
       } else {
         toast('操作已取消', { icon: '🚫' });
+        setPendingConfirm(null);
       }
     } catch (err) {
       toast.error('确认操作失败');
@@ -186,6 +221,7 @@ export function useChat() {
     isLoading,
     isStreaming,
     error,
+    pendingConfirm,
     sendMessage,
     stopStreaming,
     regenerateMessage,

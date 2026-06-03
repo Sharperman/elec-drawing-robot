@@ -4,7 +4,7 @@
  */
 import React, { useState, useRef, useCallback, KeyboardEvent } from 'react';
 import { clsx } from 'clsx';
-import { Send, Square, Paperclip, Command } from 'lucide-react';
+import { Send, Square, Paperclip, Command, X } from 'lucide-react';
 import QuickCommandPanel from './QuickCommandPanel';
 import type { RunMode } from '@/types';
 
@@ -29,9 +29,12 @@ const InputBar: React.FC<InputBarProps> = ({
   const [focused, setFocused] = useState(false);
   const [showCommands, setShowCommands] = useState(false);
   const [mode, setMode] = useState<RunMode>('auto');
+  const [attachedImage, setAttachedImage] = useState<string | null>(null);
+  const [attachedImageName, setAttachedImageName] = useState<string>('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const canSend = input.trim().length > 0 && !isLoading && !disabled;
+  const canSend = (input.trim().length > 0 || !!attachedImage) && !isLoading && !disabled;
 
   // 自动调整高度
   const adjustHeight = useCallback(() => {
@@ -44,8 +47,10 @@ const InputBar: React.FC<InputBarProps> = ({
 
   const handleSend = () => {
     if (!canSend) return;
-    onSend(input.trim(), undefined, mode);
+    onSend(input.trim(), attachedImage || undefined, mode);
     setInput('');
+    setAttachedImage(null);
+    setAttachedImageName('');
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
@@ -79,6 +84,45 @@ const InputBar: React.FC<InputBarProps> = ({
     setInput(command + ' ');
     setShowCommands(false);
     textareaRef.current?.focus();
+  };
+
+  // 附件处理
+  const handleAttachClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // 验证类型
+    const validTypes = ['image/jpeg', 'image/png', 'image/bmp', 'image/tiff', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      return;
+    }
+    // 验证大小（10MB）
+    if (file.size > 10 * 1024 * 1024) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(',')[1];
+      setAttachedImage(base64);
+      setAttachedImageName(file.name);
+    };
+    reader.readAsDataURL(file);
+
+    // 重置 input 以允许重复选择同一文件
+    e.target.value = '';
+  };
+
+  const handleRemoveImage = () => {
+    setAttachedImage(null);
+    setAttachedImageName('');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const currentMode = MODES.find(m => m.key === mode)!;
@@ -134,6 +178,30 @@ const InputBar: React.FC<InputBarProps> = ({
         </div>
       )}
 
+      {/* 附件图片预览 */}
+      {attachedImage && (
+        <div className="px-3 pb-2">
+          <div className="relative inline-block">
+            <img
+              src={`data:image/png;base64,${attachedImage}`}
+              alt={attachedImageName}
+              className="max-h-20 max-w-48 rounded-lg object-contain border border-gray-600"
+            />
+            <button
+              onClick={handleRemoveImage}
+              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-gray-700
+                         border border-gray-500 flex items-center justify-center
+                         hover:bg-red-600 transition-colors"
+            >
+              <X className="w-3 h-3 text-white" />
+            </button>
+            <span className="block text-[10px] text-gray-500 mt-0.5 truncate max-w-[180px]">
+              {attachedImageName}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* 输入区域 */}
       <div className={clsx(
         'mx-3 mb-3 rounded-xl border transition-all duration-200',
@@ -143,10 +211,26 @@ const InputBar: React.FC<InputBarProps> = ({
           : 'border-gray-700/50',
       )}>
         <div className="flex items-end gap-2 px-3 py-2">
+          {/* 隐藏文件输入 */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/bmp,image/tiff,image/webp"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+
           {/* 附件按钮 */}
           <button
-            className="p-1.5 rounded-lg text-gray-500 hover:text-gray-300 hover:bg-gray-700/50
-                       transition-colors flex-shrink-0 mb-0.5"
+            onClick={handleAttachClick}
+            disabled={isStreaming}
+            className={clsx(
+              'p-1.5 rounded-lg transition-colors flex-shrink-0 mb-0.5',
+              attachedImage
+                ? 'text-blue-400 bg-blue-500/10'
+                : 'text-gray-500 hover:text-gray-300 hover:bg-gray-700/50',
+              isStreaming && 'opacity-40 cursor-not-allowed',
+            )}
             title="上传图纸截图"
           >
             <Paperclip className="w-4 h-4" />

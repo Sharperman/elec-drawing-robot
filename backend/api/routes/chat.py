@@ -269,6 +269,12 @@ async def chat_stream(
 
             agent = get_agent(session_id)
 
+            # ── Draw 模式：先发送确认计划 ──
+            if mode == "draw":
+                plan = await _analyze_draw_intent(message, standards_context, acad_connected)
+                if plan:
+                    yield f"data: {json.dumps({'type': 'confirm_required', 'plan': plan}, ensure_ascii=False)}\n\n"
+
             # 流式生成 — 现在产出 dict 事件
             async for event in agent.chat_stream(
                 user_input=message,
@@ -626,3 +632,90 @@ def _repair_truncated_json(text: str) -> dict | None:
                 continue
 
     return None
+
+
+async def _analyze_draw_intent(
+    user_input: str,
+    standards_context: str = "",
+    acad_connected: bool = False,
+) -> dict | None:
+    """
+    分析用户的绘图意图，生成操作计划摘要。
+
+    用于 /Draw 模式下的确认预览。
+
+    Args:
+        user_input: 用户输入
+        standards_context: 规范上下文
+        acad_connected: AutoCAD 连接状态
+
+    Returns:
+        操作计划 dict，包含 summary 和 operations 列表；分析失败返回 None
+    """
+    try:
+        from config import settings
+        from langchain_openai import ChatOpenAI
+
+        llm = ChatOpenAI(
+            model=settings.MODEL_NAME,
+            openai_api_key=settings.OPENAI_API_KEY,
+            openai_api_base=settings.OPENAI_BASE_URL,
+            temperature=0.1,
+            max_tokens=800,
+        )
+
+        prompt = f"""你是一个电气CAD操作计划分析器。根据用户的绘图指令，生成一个结构化的操作计划JSON。
+
+用户指令：{user_input}
+规范上下文：{standards_context[:500] if standards_context else '无'}
+AutoCAD连接状态：{'已连接' if acad_connected else '未连接'}
+
+请生成如下JSON（仅输出JSON，不要其他内容）：
+{{
+  "summary": "一句话概述将要执行的操作（30字内）",
+  "operations": [
+    {{
+      "tool": "工具名（InsertElement/DrawConnection/AddAnnotation/ModifyElement/QueryDrawing之一）",
+      "description": "操作描述（中文，40字内）",
+      "params": {{}}
+    }}
+  ]
+}}
+
+规则：
+- operations 数组最多5项
+- tool 必须是: InsertElement, DrawConnection, AddAnnotation, ModifyElement, QueryDrawing
+- 如果用户输入不涉及绘图操作（纯咨询），operations 为空数组
+- summary 要简洁清晰
+- 如果 AutoCAD 未连接，在 summary 中提及"""
+
+        from langchain_core.messages import HumanMessage
+        resp = await llm.ainvoke([HumanMessage(content=prompt)])
+        content = resp.content if hasattr(resp, 'content') else str(resp)
+
+        # 提取 JSON
+        import re
+        json_match = re.search(r'\{[\s\S]*\}', content)
+        if json_match:
+            plan = json.loads(json_match.group())
+            if isinstance(plan, dict) and 'summary' in plan:
+                # 确保 operations 格式正确
+                ops = plan.get('operations', [])
+                if isinstance(ops, list):
+                    valid_ops = []
+                    for op in ops[:5]:
+                        if isinstance(op, dict):
+                            valid_ops.append({
+                                'tool': op.get('tool', 'InsertElement'),
+                                'description': op.get('description', ''),
+                                'params': op.get('params', {}),
+                            })
+                    plan['operations'] = valid_ops
+                return plan
+
+        logger.warning(f"Could not parse draw intent from: {content[:200]}")
+        return None
+
+    except Exception as e:
+        logger.warning(f"Failed to analyze draw intent: {e}")
+        return None
