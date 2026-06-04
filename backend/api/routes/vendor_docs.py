@@ -101,7 +101,7 @@ async def apply_vendor_result(
         from agent.draw_agent import get_agent
 
         acad = autocad_connection
-        if not acad.is_connected():
+        if not acad.is_connected:
             return ApiResponse(
                 code=1002,
                 message="AutoCAD 未连接，无法应用设备",
@@ -168,15 +168,11 @@ def _extract_pdf_text(content: bytes, filename: str) -> str:
 
 
 async def _extract_image_text(img_b64: str, mime: str) -> str:
-    """通过 LLM 视觉能力提取图片中的文字"""
+    """通过 LLM 视觉能力提取图片中的文字（使用多模态 LLM）"""
     try:
-        from config import settings
-        from langchain_openai import ChatOpenAI
+        from agent.llm_factory import create_vision_llm
 
-        llm = ChatOpenAI(
-            model=settings.MODEL_NAME,
-            openai_api_key=settings.OPENAI_API_KEY,
-            openai_api_base=settings.OPENAI_BASE_URL,
+        llm = create_vision_llm(
             temperature=0,
             max_tokens=2000,
         )
@@ -196,15 +192,11 @@ async def _extract_image_text(img_b64: str, mime: str) -> str:
 
 
 async def _extract_equipment_params(text: str) -> dict:
-    """通过 LLM 从文本中提取结构化设备参数"""
+    """通过 LLM 从文本中提取结构化设备参数（使用主力 LLM）"""
     try:
-        from config import settings
-        from langchain_openai import ChatOpenAI
+        from agent.llm_factory import create_primary_llm
 
-        llm = ChatOpenAI(
-            model=settings.MODEL_NAME,
-            openai_api_key=settings.OPENAI_API_KEY,
-            openai_api_base=settings.OPENAI_BASE_URL,
+        llm = create_primary_llm(
             temperature=0.1,
             max_tokens=2000,
         )

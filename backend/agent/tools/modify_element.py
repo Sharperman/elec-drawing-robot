@@ -43,6 +43,9 @@ class ModifyElementTool(BaseTool):
     - 图层的颜色、线型、线宽
     """
 
+    # CanvasState 注入（由 DrawAgent 在构建工具时设置）
+    canvas_state: object = Field(default=None, exclude=True)
+
     name: str = "modify_element"
     description: str = (
         "修改 AutoCAD 图纸中已有图元的属性或位置。"
@@ -141,6 +144,22 @@ class ModifyElementTool(BaseTool):
                         logger.warning(f"Failed to set scale: {e}")
 
                 result = f"图元 {handle} 已修改: {', '.join(changed_items) if changed_items else '无变更'}"
+
+                # ── 同步 CanvasState ──────────────────────────
+                if self.canvas_state is not None and changed_items:
+                    cs_updates = {}
+                    if "x" in properties or "y" in properties:
+                        cs_updates["x"] = float(properties.get("x", 0))
+                        cs_updates["y"] = float(properties.get("y", 0))
+                    if "layer" in properties:
+                        cs_updates["layer"] = str(properties["layer"])
+                    if "rotation" in properties:
+                        cs_updates["rotation"] = float(properties["rotation"])
+                    if "scale" in properties:
+                        cs_updates["scale"] = float(properties["scale"])
+                    if cs_updates:
+                        self.canvas_state.record_update_device(handle, **cs_updates)
+
                 logger.info(result)
                 return result
 

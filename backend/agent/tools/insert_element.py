@@ -30,6 +30,9 @@ class InsertElementTool(BaseTool):
     并可选地添加设备标注。
     """
 
+    # CanvasState 注入（由 DrawAgent 在构建工具时设置）
+    canvas_state: object = Field(default=None, exclude=True)
+
     name: str = "insert_element"
     description: str = (
         "向 AutoCAD 当前图纸中插入电气图元（图块）。\n"
@@ -126,6 +129,19 @@ class InsertElementTool(BaseTool):
                 )
 
             logger.info(f"InsertElement success: {symbol_id} at ({x},{y}) handle={handle}")
+
+            # ── 更新 CanvasState ──────────────────────────────
+            if self.canvas_state is not None:
+                self.canvas_state.record_device(
+                    handle=handle,
+                    symbol_id=symbol_id,
+                    x=x, y=y,
+                    label=label,
+                    layer=target_layer,
+                    rotation=rotation,
+                    scale=scale,
+                )
+
             return (
                 f"成功插入 {symbol.name}（{symbol_id}）于坐标 ({x:.1f}, {y:.1f})，"
                 f"图层: {target_layer}，Handle: {handle}"

@@ -81,6 +81,8 @@ def create_all_tables() -> None:
     from models.symbol import Symbol  # noqa: F401
     from models.standard import DrawingStandard, LayerConfig  # noqa: F401
     from models.feedback import UserFeedback, LearnedRule  # noqa: F401
+    from models.llm_provider import LLMProvider  # noqa: F401
+    from models.drawing_pattern import DrawingPattern  # noqa: F401
 
     engine = get_engine()
     Base.metadata.create_all(bind=engine)

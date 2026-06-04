@@ -34,8 +34,13 @@ class Settings(BaseSettings):
         default="text-embedding-3-small",
         description="Embedding 模型名称",
     )
-    LLM_TEMPERATURE: float = Field(default=0.1, ge=0.0, le=2.0)
-    LLM_MAX_TOKENS: int = Field(default=16384, ge=256, le=65536)
+    LLM_TEMPERATURE: float = Field(default=1.0, ge=0.0, le=2.0)
+    LLM_MAX_TOKENS: int = Field(default=16384, ge=256, le=2097152)
+
+    # ---- Vision LLM（多模态） ----
+    VISION_MODEL_NAME: str = Field(default="", description="多模态 LLM 模型名称（空则 fallback 到 MODEL_NAME）")
+    VISION_API_KEY: str = Field(default="", description="多模态 LLM API Key（空则 fallback 到 OPENAI_API_KEY）")
+    VISION_BASE_URL: str = Field(default="", description="多模态 LLM API 地址（空则 fallback 到 OPENAI_BASE_URL）")
 
     # ---- 服务器 ----
     PORT: int = Field(default=8765, description="FastAPI 监听端口")
@@ -112,6 +117,18 @@ class Settings(BaseSettings):
         default=5, description="累积多少条反馈后触发规则提炼"
     )
 
+    # ---- 文件上传 ----
+    UPLOAD_DIR: str = Field(
+        default=str(ROOT_DIR / "data" / "uploads"),
+        description="文件上传目录（参考图纸等）",
+    )
+
+    # ---- 学习模式 ----
+    LEARN_THUMB_DIR: str = Field(
+        default=str(ROOT_DIR / "data" / "pattern_thumbnails"),
+        description="学习模式缩略图目录",
+    )
+
 
 # 全局单例
 settings = Settings()
@@ -120,3 +137,6 @@ settings = Settings()
 Path(settings.DB_PATH).parent.mkdir(parents=True, exist_ok=True)
 Path(settings.CHROMA_PATH).mkdir(parents=True, exist_ok=True)
 Path(settings.LOG_DIR).mkdir(parents=True, exist_ok=True)
+Path(settings.UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
+Path(settings.LEARN_THUMB_DIR).mkdir(parents=True, exist_ok=True)
+

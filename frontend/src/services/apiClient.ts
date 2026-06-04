@@ -25,6 +25,10 @@ const apiClient: AxiosInstance = axios.create({
 
 apiClient.interceptors.request.use(
   (config) => {
+    // 上传 FormData 时删除默认 Content-Type，让浏览器自动设置 multipart boundary
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
+    }
     // 可在此处添加认证 token（当前 MVP 不需要）
     return config;
   },

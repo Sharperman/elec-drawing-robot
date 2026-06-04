@@ -41,6 +41,9 @@ class AddAnnotationTool(BaseTool):
     - leader：带引线的注释
     """
 
+    # CanvasState 注入（由 DrawAgent 在构建工具时设置）
+    canvas_state: object = Field(default=None, exclude=True)
+
     name: str = "add_annotation"
     description: str = (
         "向 AutoCAD 图纸中添加文字标注、尺寸标注或引线注释。"
@@ -133,6 +136,19 @@ class AddAnnotationTool(BaseTool):
                 handles.append(h)
 
             label_text = label + (f" / {params}" if params else "")
+
+            # ── 更新 CanvasState ──────────────────────────────
+            if self.canvas_state is not None:
+                for h in handles:
+                    self.canvas_state.record_annotation(
+                        handle=h,
+                        text=label_text,
+                        x=ann_x, y=ann_y,
+                        target_handle=handle,  # 标注关联到目标图元
+                        height=text_height,
+                        annotation_type=annotation_type,
+                    )
+
             logger.info(f"AddAnnotation success: '{label_text}' at ({ann_x:.1f},{ann_y:.1f})")
             return (
                 f"成功添加标注「{label_text}」于坐标 ({ann_x:.1f}, {ann_y:.1f})，"

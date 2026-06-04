@@ -231,48 +231,26 @@ class VisualReader:
         Returns:
             LLM 返回的 JSON 分析结果
         """
-        from config import settings
-        import httpx
+        from agent.llm_factory import create_primary_llm
+        from langchain_core.messages import HumanMessage, SystemMessage
 
         # 截断过长文本（保留前 12000 字符）
         if len(dxf_text) > 12000:
             dxf_text = dxf_text[:12000] + "\n\n... (文本已截断)"
 
-        messages = [
-            {
-                "role": "system",
-                "content": "你是一位资深电气工程师，擅长分析电气图纸的结构化文本数据。请严格以 JSON 格式输出分析结果。",
-            },
-            {
-                "role": "user",
-                "content": f"{self.TEXT_ANALYSIS_PROMPT}\n\n---\n以下是 DXF 提取的结构化数据：\n\n{dxf_text}",
-            },
-        ]
-
-        api_url = f"{settings.OPENAI_BASE_URL}/chat/completions"
-        headers = {
-            "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
-            "Content-Type": "application/json",
-        }
-        payload = {
-            "model": settings.MODEL_NAME,
-            "messages": messages,
-            "temperature": 0.1,
-            "max_tokens": 4096,
-        }
-
         try:
-            with httpx.Client(timeout=120.0) as client:
-                response = client.post(api_url, headers=headers, json=payload)
-                response.raise_for_status()
-                data = response.json()
-
-            content = data["choices"][0]["message"]["content"]
+            llm = create_primary_llm(
+                temperature=0.1,
+                max_tokens=4096,
+            )
+            messages = [
+                SystemMessage(content="你是一位资深电气工程师，擅长分析电气图纸的结构化文本数据。请严格以 JSON 格式输出分析结果。"),
+                HumanMessage(content=f"{self.TEXT_ANALYSIS_PROMPT}\n\n---\n以下是 DXF 提取的结构化数据：\n\n{dxf_text}"),
+            ]
+            resp = llm.invoke(messages)
+            content = resp.content if hasattr(resp, 'content') else str(resp)
             return self._parse_llm_json(content)
 
-        except httpx.HTTPStatusError as e:
-            logger.error(f"Text LLM HTTP error: {e.response.status_code} {e.response.text[:200]}")
-            return {"error": f"LLM API 错误: HTTP {e.response.status_code}", "raw": ""}
         except Exception as e:
             logger.error(f"Text LLM call failed: {e}")
             return {"error": f"LLM 调用失败: {e}", "raw": ""}
@@ -287,52 +265,25 @@ class VisualReader:
         Returns:
             LLM 返回的 JSON 分析结果
         """
-        from config import settings
-        import httpx
-
-        # 构建多模态消息
-        messages = [
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": image_b64, "detail": "high"},
-                    },
-                    {
-                        "type": "text",
-                        "text": self.ANALYSIS_PROMPT,
-                    },
-                ],
-            }
-        ]
-
-        api_url = f"{settings.OPENAI_BASE_URL}/chat/completions"
-        headers = {
-            "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
-            "Content-Type": "application/json",
-        }
-        payload = {
-            "model": settings.MODEL_NAME,
-            "messages": messages,
-            "temperature": 0.1,
-            "max_tokens": 4096,
-        }
+        from agent.llm_factory import create_vision_llm
+        from langchain_core.messages import HumanMessage
 
         try:
-            with httpx.Client(timeout=120.0) as client:
-                response = client.post(api_url, headers=headers, json=payload)
-                response.raise_for_status()
-                data = response.json()
+            llm = create_vision_llm(
+                temperature=0.1,
+                max_tokens=4096,
+            )
 
-            content = data["choices"][0]["message"]["content"]
-
-            # 解析 JSON
+            msg = HumanMessage(
+                content=[
+                    {"type": "image_url", "image_url": {"url": image_b64, "detail": "high"}},
+                    {"type": "text", "text": self.ANALYSIS_PROMPT},
+                ]
+            )
+            resp = llm.invoke([msg])
+            content = resp.content if hasattr(resp, 'content') else str(resp)
             return self._parse_llm_json(content)
 
-        except httpx.HTTPStatusError as e:
-            logger.error(f"Vision LLM HTTP error: {e.response.status_code} {e.response.text[:200]}")
-            return {"error": f"LLM API 错误: HTTP {e.response.status_code}", "raw": ""}
         except Exception as e:
             logger.error(f"Vision LLM call failed: {e}")
             return {"error": f"LLM 调用失败: {e}", "raw": ""}

@@ -37,6 +37,9 @@ class DrawConnectionTool(BaseTool):
     支持直线和折线连接。
     """
 
+    # CanvasState 注入（由 DrawAgent 在构建工具时设置）
+    canvas_state: object = Field(default=None, exclude=True)
+
     name: str = "draw_connection"
     description: str = (
         "在 AutoCAD 中连接两个电气图元，绘制母线或导线。"
@@ -119,6 +122,17 @@ class DrawConnectionTool(BaseTool):
                 f"DrawConnection success: {from_handle} -> {to_handle} "
                 f"type={line_type} layer={target_layer}"
             )
+
+            # ── 更新 CanvasState ──────────────────────────────
+            if self.canvas_state is not None:
+                self.canvas_state.record_connection(
+                    from_handle=from_handle,
+                    to_handle=to_handle,
+                    line_type=line_type,
+                    layer=target_layer,
+                    via_points=parsed_via if parsed_via else None,
+                )
+
             type_names = {"bus": "母线", "wire": "导线", "cable": "电缆"}
             type_label = type_names.get(line_type, "连线")
             return (

@@ -80,7 +80,7 @@ async def apply_template(template_id: str) -> ApiResponse:
         from autocad.connection import autocad_connection
 
         acad = autocad_connection
-        if not acad.is_connected():
+        if not acad.is_connected:
             return ApiResponse(
                 code=1002,
                 message="AutoCAD 未连接，无法应用模板",

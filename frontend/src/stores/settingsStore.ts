@@ -1,6 +1,6 @@
 /**
- * Settings Store - API Key、LLM 配置、用户偏好、布局状态
- * 扩展版：添加 sidebarCollapsed / previewCollapsed 供 AppShell 使用
+ * Settings Store — AutoCAD 配置 + 用户偏好 + 布局状态
+ * LLM 配置已迁移至独立的 LLMConfigPage（/api/llm/providers）
  */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -22,8 +22,8 @@ interface SettingsActions {
 
 const defaultSettings: AppSettings = {
   openaiApiKey: '',
-  openaiBaseUrl: 'https://api.openai.com/v1',
-  modelName: 'gpt-4o',
+  openaiBaseUrl: '',
+  modelName: '',
   autocadVersion: 'AutoCAD.Application',
   theme: 'dark',
   language: 'zh',

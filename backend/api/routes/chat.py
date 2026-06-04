@@ -668,12 +668,9 @@ async def _analyze_draw_intent(
     """
     try:
         from config import settings
-        from langchain_openai import ChatOpenAI
+        from agent.llm_factory import create_primary_llm
 
-        llm = ChatOpenAI(
-            model=settings.MODEL_NAME,
-            openai_api_key=settings.OPENAI_API_KEY,
-            openai_api_base=settings.OPENAI_BASE_URL,
+        llm = create_primary_llm(
             temperature=0.1,
             max_tokens=800,
         )
@@ -755,7 +752,7 @@ async def _auto_validate_after_draw(
     """
     try:
         from config import settings
-        from langchain_openai import ChatOpenAI
+        from agent.llm_factory import create_primary_llm
         from autocad.connection import autocad_connection
 
         # 获取图纸当前状态
@@ -763,10 +760,7 @@ async def _auto_validate_after_draw(
         drawing_info = autocad_connection.get_drawing_info() if hasattr(autocad_connection, 'get_drawing_info') else {}
         entity_count = drawing_info.get('entity_count', '未知') if isinstance(drawing_info, dict) else '未知'
 
-        llm = ChatOpenAI(
-            model=settings.MODEL_NAME,
-            openai_api_key=settings.OPENAI_API_KEY,
-            openai_api_base=settings.OPENAI_BASE_URL,
+        llm = create_primary_llm(
             temperature=0.1,
             max_tokens=1200,
         )

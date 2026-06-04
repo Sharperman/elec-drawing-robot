@@ -148,15 +148,11 @@ class IntentParser:
 
     async def _llm_classify(self, user_input: str) -> Optional[IntentType]:
         """使用 LLM 进行精确意图分类"""
-        from langchain_openai import ChatOpenAI
         from langchain_core.messages import HumanMessage
-        from config import settings
+        from agent.llm_factory import create_primary_llm
         from agent.prompts.system_prompt import INTENT_CLASSIFICATION_PROMPT
 
-        llm = ChatOpenAI(
-            model=settings.MODEL_NAME,
-            openai_api_key=settings.OPENAI_API_KEY,
-            openai_api_base=settings.OPENAI_BASE_URL,
+        llm = create_primary_llm(
             temperature=0.0,
             max_tokens=20,
         )

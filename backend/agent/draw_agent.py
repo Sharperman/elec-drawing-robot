@@ -1,6 +1,6 @@
 """
 LangChain Agent 初始化
-AgentExecutor + 5 个 Tool + Memory + 规范上下文注入
+AgentExecutor + 6 个 Tool + CanvasState + Memory + 规范上下文注入
 """
 import json
 from typing import Optional, AsyncIterator
@@ -8,26 +8,32 @@ from typing import Optional, AsyncIterator
 from langchain_classic.agents import AgentExecutor, create_openai_tools_agent
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_openai import ChatOpenAI
 from loguru import logger
+
+from autocad.canvas_state import CanvasState, get_canvas_state, destroy_canvas_state
 
 
 class DrawAgent:
     """
     电气图纸绘制 Agent
     
-    基于 LangChain OpenAI Tools Agent，集成 5 个工具：
+    基于 LangChain OpenAI Tools Agent，集成 6 个工具：
     - InsertElement：插入图元
     - DrawConnection：绘制连线
     - AddAnnotation：添加标注
     - ModifyElement：修改图元
-    - QueryDrawing：查询图纸
+    - QueryDrawing：查询图纸（COM+视觉）
+    - QueryCanvas：查询画布状态记忆（★ 新增）
+    
+    同时维护画布状态记忆（CanvasState），
+    每次工具执行后自动更新，LLM 可随时查询。
     """
 
     def __init__(self, session_id: str) -> None:
         self.session_id = session_id
         self._executor: Optional[AgentExecutor] = None
         self._message_history: list[BaseMessage] = []
+        self.canvas_state: CanvasState = get_canvas_state(session_id)
 
     def _build_executor(self, standards_context: str = "", learned_rules: Optional[list[str]] = None, acad_connected: bool = False, drawing_name: str = "") -> AgentExecutor:
         """
@@ -43,30 +49,30 @@ class DrawAgent:
             AgentExecutor 实例
         """
         from config import settings
+        from agent.llm_factory import create_primary_llm
         from agent.prompts.system_prompt import build_system_prompt
         from agent.tools.insert_element import InsertElementTool
         from agent.tools.draw_connection import DrawConnectionTool
         from agent.tools.add_annotation import AddAnnotationTool
         from agent.tools.modify_element import ModifyElementTool
         from agent.tools.query_drawing import QueryDrawingTool
+        from agent.tools.query_canvas import QueryCanvasTool
 
-        # LLM
-        llm = ChatOpenAI(
-            model=settings.MODEL_NAME,
-            openai_api_key=settings.OPENAI_API_KEY,
-            openai_api_base=settings.OPENAI_BASE_URL,
+        # LLM — 通过工厂获取（数据库优先，.env fallback）
+        llm = create_primary_llm(
+            streaming=True,
             temperature=settings.LLM_TEMPERATURE,
             max_tokens=settings.LLM_MAX_TOKENS,
-            streaming=True,
         )
 
-        # 工具集
+        # 工具集（6 个工具，QueryCanvas 为新增）
         tools = [
-            InsertElementTool(),
-            DrawConnectionTool(),
-            AddAnnotationTool(),
-            ModifyElementTool(),
+            InsertElementTool(canvas_state=self.canvas_state),
+            DrawConnectionTool(canvas_state=self.canvas_state),
+            AddAnnotationTool(canvas_state=self.canvas_state),
+            ModifyElementTool(canvas_state=self.canvas_state),
             QueryDrawingTool(),
+            QueryCanvasTool(canvas_state=self.canvas_state),
         ]
 
         # 系统提示词（含规范上下文 + AutoCAD 连接状态）
@@ -179,9 +185,11 @@ class DrawAgent:
             - {"type": "error", "content": "..."}
         """
         from config import settings
+        from agent.llm_factory import create_primary_llm
         from agent.tools import (
             InsertElementTool, DrawConnectionTool,
             AddAnnotationTool, ModifyElementTool, QueryDrawingTool,
+            QueryCanvasTool,
         )
         from agent.prompts.system_prompt import build_system_prompt
 
@@ -190,13 +198,10 @@ class DrawAgent:
         system_prompt = build_system_prompt(standards_context, learned_rules, acad_connected, drawing_name)
         system_prompt = mode_instruction + "\n\n" + system_prompt
 
-        llm = ChatOpenAI(
-            model=settings.MODEL_NAME,
-            openai_api_key=settings.OPENAI_API_KEY,
-            openai_api_base=settings.OPENAI_BASE_URL,
+        llm = create_primary_llm(
+            streaming=True,
             temperature=settings.LLM_TEMPERATURE,
             max_tokens=settings.LLM_MAX_TOKENS,
-            streaming=True,
         )
 
         prompt = ChatPromptTemplate.from_messages([
@@ -207,11 +212,12 @@ class DrawAgent:
         ])
 
         tools = [
-            InsertElementTool(),
-            DrawConnectionTool(),
-            AddAnnotationTool(),
-            ModifyElementTool(),
+            InsertElementTool(canvas_state=self.canvas_state),
+            DrawConnectionTool(canvas_state=self.canvas_state),
+            AddAnnotationTool(canvas_state=self.canvas_state),
+            ModifyElementTool(canvas_state=self.canvas_state),
             QueryDrawingTool(),
+            QueryCanvasTool(canvas_state=self.canvas_state),
         ]
 
         agent = create_openai_tools_agent(llm=llm, tools=tools, prompt=prompt)
@@ -276,8 +282,9 @@ class DrawAgent:
             yield {"type": "error", "content": str(e)[:500]}
 
     def clear_history(self) -> None:
-        """清除对话历史"""
+        """清除对话历史和画布状态"""
         self._message_history.clear()
+        self.canvas_state.reset()
 
     @staticmethod
     def _build_mode_instruction(mode: str) -> str:

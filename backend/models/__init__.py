@@ -6,6 +6,8 @@ from models.drawing_session import DrawingSession, ChatMessage
 from models.symbol import Symbol
 from models.standard import DrawingStandard, LayerConfig
 from models.feedback import UserFeedback, LearnedRule
+from models.llm_provider import LLMProvider
+from models.drawing_pattern import DrawingPattern
 
 __all__ = [
     "DrawingSession",
@@ -15,4 +17,6 @@ __all__ = [
     "LayerConfig",
     "UserFeedback",
     "LearnedRule",
+    "LLMProvider",
+    "DrawingPattern",
 ]

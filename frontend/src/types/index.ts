@@ -312,7 +312,51 @@ export interface PythonStatus {
 }
 
 // ============================================================
-// 应用设置
+// LLM Provider 管理
+// ============================================================
+
+/** LLM Provider（与后端 LLMProvider 模型对应） */
+export interface LLMProvider {
+  id: number;
+  provider_name: string;
+  base_url: string;
+  api_key: string;        // 前端收到的总是消隐后的（仅显示前后4位）
+  model: string;
+  is_primary: boolean;
+  is_vision: boolean;
+  temperature: number;
+  is_active: boolean;
+  last_tested_at: string | null;
+  test_status: 'ok' | 'fail' | 'unknown' | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+/** 创建/更新 Provider 请求 */
+export interface CreateProviderRequest {
+  provider_name: string;
+  base_url: string;
+  api_key: string;
+  model: string;
+  temperature?: number;
+}
+
+/** 激活请求 */
+export interface ActivateProviderRequest {
+  role: 'primary' | 'vision';
+}
+
+/** 测试连接响应 */
+export interface TestProviderResponse {
+  status: 'ok' | 'fail';
+  elapsed_ms?: number;
+  model?: string;
+  response?: string;
+  error?: string;
+}
+
+// ============================================================
+// 应用设置（LLM 字段已废弃，改用 LLMProvider 管理）
 // ============================================================
 
 export interface AppSettings {
@@ -324,4 +368,61 @@ export interface AppSettings {
   language: 'zh' | 'en';
   autoConnectAutocad: boolean;
   snapshotInterval: number; // 截图刷新间隔（秒）
+}
+
+// ============================================================
+// 学习模式 /learn
+// ============================================================
+
+/** 学习进度步骤 */
+export interface LearnStep {
+  phase: string;
+  status: 'pending' | 'running' | 'done' | 'error';
+  message: string;
+}
+
+/** 学习 SSE 事件 - extends SSEEvent */
+export interface LearnSSEEvent {
+  type: 'progress' | 'screenshot' | 'analysis' | 'question' | 'pattern' | 'done' | 'error';
+  phase?: string;
+  message?: string;
+  screenshot_b64?: string;
+  description?: string;
+  analysis?: string;
+  question_text?: string;
+  question_id?: string;
+  pattern?: DrawingPattern | Record<string, unknown>;
+  error?: string;
+}
+
+/** 已学习的图纸模式 */
+export interface DrawingPattern {
+  id: number;
+  name: string;
+  source_file: string;
+  source_type: string;
+  topology: Record<string, unknown>;
+  devices: Array<{
+    type: string;
+    label_pattern: string;
+    typical_position?: { x: number; y: number };
+    quantity: number;
+    params?: Record<string, unknown>;
+  }>;
+  layout_rules: string[];
+  annotation_style: Record<string, unknown>;
+  connection_patterns: Record<string, unknown>;
+  raw_analysis: Record<string, unknown>;
+  usage_count: number;
+  is_confirmed: boolean;
+  created_at: string;
+  thumbnail_path?: string;
+  unresolved_questions?: string[];
+}
+
+/** 确认模式请求 */
+export interface ConfirmPatternRequest {
+  confirmed: boolean;
+  modifications?: Record<string, unknown>;
+  answers?: Record<string, string>;
 }

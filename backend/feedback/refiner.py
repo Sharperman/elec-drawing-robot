@@ -118,14 +118,10 @@ class FeedbackRefiner:
     async def _call_llm_refine(self, feedback_summary: str) -> Optional[list[dict]]:
         """调用 LLM 提炼规则"""
         try:
-            from langchain_openai import ChatOpenAI
             from langchain_core.messages import HumanMessage
-            from config import settings
+            from agent.llm_factory import create_primary_llm
 
-            llm = ChatOpenAI(
-                model=settings.MODEL_NAME,
-                openai_api_key=settings.OPENAI_API_KEY,
-                openai_api_base=settings.OPENAI_BASE_URL,
+            llm = create_primary_llm(
                 temperature=0.3,
                 max_tokens=2048,
             )
