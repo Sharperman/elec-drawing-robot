@@ -16,7 +16,7 @@ import uuid
 from pathlib import Path
 from typing import AsyncGenerator, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, File
 from fastapi.responses import StreamingResponse
 from loguru import logger
 from sqlalchemy.orm import Session
@@ -183,10 +183,10 @@ async def get_pattern(
 @router.post("/patterns/{pattern_id}/confirm", response_model=ApiResponse)
 async def confirm_pattern(
     pattern_id: int,
-    overrides: Optional[dict] = None,
-    user_notes: Optional[str] = None,
-    session_id: str = "",
-    confirmed: bool = True,
+    overrides: Optional[dict] = Body(None),
+    user_notes: Optional[str] = Body(None),
+    session_id: str = Body(""),
+    confirmed: bool = Body(True),
     db: Session = Depends(get_db),
 ):
     """
@@ -218,6 +218,10 @@ async def confirm_pattern(
 
             if not pattern_data:
                 return ApiResponse(code=400, message="没有可保存的 Pattern 数据")
+
+            logger.info(f"Pattern data keys: {list(pattern_data.keys()) if pattern_data else 'None'}, "
+                         f"has_devices: {bool(pattern_data.get('devices'))}, "
+                         f"has_topology: {bool(pattern_data.get('topology'))}")
 
             dp = DrawingPattern()
             db.add(dp)

@@ -526,6 +526,10 @@ class LearnAgent:
         """调用视觉 LLM 分析单张截图。优先使用数据库中配置的多模态 LLM。"""
         db = None
         try:
+            # capture() 返回的 base64 可能带 data URI 前缀，需要剥离
+            if screenshot_b64.startswith("data:"):
+                screenshot_b64 = screenshot_b64.split(",", 1)[-1]
+
             db = get_session_local()()
             llm = create_vision_llm(db=db)
             msg = HumanMessage(content=[
@@ -547,11 +551,41 @@ class LearnAgent:
                 db.close()
 
     def _extract_dxf_text(self, file_path: str) -> str:
-        """使用 ezdxf 提取结构化文本"""
+        """提取图纸文本。DXF 用 ezdxf，DWG 用 AutoCAD COM"""
+        ext = Path(file_path).suffix.lower()
+        if ext == '.dwg':
+            return self._extract_dwg_text_acad(file_path)
+        # DXF: 用 ezdxf
         try:
             return dxf_text_extractor.extract_from_dxf(file_path)
         except Exception as e:
             logger.warning(f"ezdxf 提取失败: {e}")
+            return ""
+
+    def _extract_dwg_text_acad(self, file_path: str) -> str:
+        """通过 AutoCAD COM 提取 DWG 文件中的文本"""
+        try:
+            from autocad.connection import autocad_connection
+            if not autocad_connection.app:
+                logger.warning("AutoCAD 未连接，无法提取 DWG 文本")
+                return ""
+            doc = autocad_connection.doc
+            text_parts = []
+            for entity in doc.ModelSpace:
+                try:
+                    if hasattr(entity, 'TextString'):
+                        text_parts.append(entity.TextString)
+                    elif hasattr(entity, 'TagString'):
+                        text_parts.append(f"[{entity.TagString}] {entity.TextString}")
+                except Exception:
+                    continue
+                if len(text_parts) > 500:
+                    break  # 防止超大文件
+            result = "\n".join(text_parts[:500])
+            logger.info(f"AutoCAD COM 提取到 {len(text_parts)} 个文本对象")
+            return result
+        except Exception as e:
+            logger.warning(f"AutoCAD COM 文本提取失败: {e}")
             return ""
 
     def _generate_pattern(self, dxf_text: str) -> Optional[dict]:
@@ -600,7 +634,10 @@ class LearnAgent:
                 HumanMessage(content=prompt),
             ])
             content = resp.content if hasattr(resp, "content") else str(resp)
-            return self._parse_json(content)
+            logger.debug(f"Pattern LLM raw output ({len(content)} chars): {content[:300]}")
+            parsed = self._parse_json(content)
+            logger.info(f"Pattern parsed: keys={list(parsed.keys())}, has_devices={bool(parsed.get('devices'))}, has_topology={bool(parsed.get('topology'))}")
+            return parsed
 
         except Exception as e:
             logger.error(f"生成 Pattern 失败: {e}")
@@ -610,27 +647,47 @@ class LearnAgent:
                 db2.close()
 
     def _parse_json(self, text: str) -> dict:
-        """从 LLM 输出中提取 JSON"""
+        """从 LLM 输出中提取 JSON，多级降级策略"""
         if not text:
             return {}
+
+        # Level 1: 纯 JSON
         try:
             return json.loads(text)
         except json.JSONDecodeError:
             pass
-        # 尝试提取 ```json ... ```
+
+        # Level 2: ```json ... ``` 代码块
         m = re.search(r'```(?:json)?\s*\n?([\s\S]*?)\n?\s*```', text)
         if m:
             try:
                 return json.loads(m.group(1).strip())
             except json.JSONDecodeError:
                 pass
-        # 尝试提取 { ... }
-        m2 = re.search(r'\{[\s\S]*\}', text)
-        if m2:
+
+        # Level 3: 最外层 { ... } (从第一个 { 到最后一个 })
+        m = re.search(r'\{[\s\S]*\}', text)
+        if m:
             try:
-                return json.loads(m2.group())
+                return json.loads(m.group())
             except json.JSONDecodeError:
-                pass
+                # Level 3b: 清理常见问题（尾部逗号、注释等）
+                cleaned = re.sub(r',\s*([}\]])', r'\1', m.group())  # 移除末尾逗号
+                cleaned = re.sub(r'//[^\n]*', '', cleaned)          # 移除 C++ 风格注释
+                try:
+                    return json.loads(cleaned)
+                except json.JSONDecodeError:
+                    pass
+
+        # Level 4: 强按头 — 尝试用 ast.literal_eval
+        try:
+            import ast
+            return ast.literal_eval(m.group() if m else text.lstrip())
+        except Exception:
+            pass
+
+        # 兜底：记录原始输出方便排查
+        logger.warning(f"LLM output not valid JSON, returning raw. First 200 chars: {text[:200]}")
         return {"raw": text[:500]}
 
     def _format_pattern_summary(self, pattern: dict) -> str:
