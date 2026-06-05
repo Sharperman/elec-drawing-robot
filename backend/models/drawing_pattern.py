@@ -51,6 +51,15 @@ class DrawingPattern(Base):
     # 图层规范：{"bus":"ELEC-BUS","wire":"ELEC-WIRE","device":"ELEC-DEVICE"}
     layer_spec = Column(Text, comment="JSON - 图层规范")
 
+    # 制图习惯：{"title_block_position":"右下角","scale":"1:100",...}
+    drawing_habits = Column(Text, comment="JSON - 制图习惯")
+
+    # 电缆清单：[{"cable_id":"CABLE-01","type":"铜芯电缆",...}]
+    cables_and_lines = Column(Text, comment="JSON - 电缆和导线清单")
+
+    # 材料表：{"has_bom_table":true,"position":"右下角",...}
+    bill_of_materials = Column(Text, comment="JSON - 材料表信息")
+
     # ezdxf 原始文本提取（用于 RAG 检索）
     dxf_text = Column(Text, comment="DXF 文本提取结果（用于 RAG）")
 
@@ -96,6 +105,9 @@ class DrawingPattern(Base):
             "annotation_style": _parse(self.annotation_style),
             "connection_patterns": _parse(self.connection_patterns),
             "layer_spec": _parse(self.layer_spec),
+            "drawing_habits": _parse(self.drawing_habits),
+            "cables_and_lines": _parse(self.cables_and_lines),
+            "bill_of_materials": _parse(self.bill_of_materials),
             "dxf_text": self.dxf_text,
             "visual_analysis": _parse(self.visual_analysis),
             "usage_count": self.usage_count,
@@ -120,7 +132,8 @@ class DrawingPattern(Base):
         for key in (
             "topology", "devices", "layout_rules",
             "annotation_style", "connection_patterns", "layer_spec",
-            "visual_analysis",
+            "visual_analysis", "drawing_habits", "cables_and_lines",
+            "bill_of_materials",
         ):
             if key in d and d[key] is not None:
                 val = d[key]

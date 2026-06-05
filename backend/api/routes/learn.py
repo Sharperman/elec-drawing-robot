@@ -60,6 +60,8 @@ async def learn_stream(
 
         def _run_in_thread():
             """在线程中执行同步 LLM 调用，结果放入队列"""
+            import pythoncom
+            pythoncom.CoInitialize()  # COM 必须在当前线程初始化
             try:
                 agent = get_learn_agent(session_id)
                 if file_id and os.path.exists(file_id):
@@ -73,6 +75,7 @@ async def learn_stream(
                 traceback.print_exc()
                 queue.put_nowait(("data", {"type": "error", "error": f"学习过程出错: {str(e)[:200]}"}))
             finally:
+                pythoncom.CoUninitialize()
                 queue.put_nowait(("done", None))
 
         # 在独立线程中运行，避免阻塞 asyncio 事件循环

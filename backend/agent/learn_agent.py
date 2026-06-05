@@ -67,70 +67,145 @@ ZOOM_INSTRUCTION = """## 缩放控制（由系统自动执行，你只需描述�
 请在回复中说明，系统会执行 ZoomWindow 后截图给你。
 """
 
-ANALYSIS_PROMPT = """基于以下多尺度截图分析结果，提取这张图纸的完整 DrawingPattern。
+ANALYSIS_PROMPT = """你是一位资深电气工程制图专家。你需要将以下多尺度截图分析结果整理成一份**完整的 DrawingPattern 模板**，供 AI 绘图 Agent 未来复现同类图纸时使用。
+
+# 🔴 核心原则：宁可冗余，不可遗漏
+
+1. **必须穷尽**：从截图中提取**每一个**设备、**每一处**标注、**每一条**连接关系。不要做"代表性枚举"。
+2. **不要简化**：即使图纸内容很少（如只有集电线路），也要完整描述所有可见元素。
+3. **推断制图习惯**：从标注位置、文字大小、箭头样式、线型粗细等推断制图规范。
+4. **禁止空字段**：如果某个字段确实无法确定，写明原因（如"图中未见该类型"），不要留 null / [] / ""。
+
+# 📋 信息来源
+- **截图分析汇总**（多尺度视觉 LLM 逐区域分析结果）
+- **文本提取**（ezdxf 或 AutoCAD COM 提取的标注文字）
+- **用户补充信息**（用户额外说明）
+
+---
 
 ## 截图分析汇总
 {screenshots_analysis}
 
-## ezdxf 结构化提取
+## 文本提取
 {dxf_text}
 
 ## 用户补充信息
 {user_feedback}
 
-请输出如下 JSON（注意：这是给 AI 绘图 Agent 未来使用的模板，要尽可能详细）：
+---
+
+# 📤 输出格式
+
+必须输出如下完整 JSON。**每个字段都必须有实际内容**，除非确实不存在。
 
 ```json
 {{
-  "name": "模式名称（如'220kV双母线变电站主接线'）",
-  "description": "详细描述此图纸的设计意图和特点",
+  "name": "图纸名称（如：35kV集电线路接线图 / 220kV升压站主接线图）。如果截图中没有明确标题，请根据图纸内容推断一个准确的名称",
+  "description": "【不少于100字】详细描述：(1)图纸的设计用途和电压等级 (2)电气拓扑结构 (3)主要设备类型和数量 (4)图纸的整体布局方向 (5)特殊设计特点 (6)标注风格和制图习惯",
+  "drawing_habits": {{
+    "title_block_position": "标题栏位置（右下角/右下角带图框/无标题栏）",
+    "scale": "推断的图纸比例（如 1:100），无法判断则写 unknown",
+    "unit": "图纸单位（mm/cm/m），通常电气图纸为 mm",
+    "line_weights": {{"thin": "细线对象类型（如标注线）", "thick": "粗线对象类型（如主母线、电缆）"}},
+    "fonts": ["观察到的所有字体（如 Simplex, HZTXT）"],
+    "typical_text_height": 3.5,
+    "grid_reference": "是否有网格/参考坐标系？格式是什么样的？",
+    "page_size": "如 A1/A2/A3，无法判断写 unknown",
+    "other_conventions": ["其他观察到的制图习惯，如设备编号规则、图例位置等"]
+  }},
   "topology": {{
-    "type": "双母线 / 单母线分段 / 线路变压器组 / ...",
-    "voltage_levels": ["220kV", "66kV"],
-    "arrangement": "高层到低层：高压→中压→低压",
-    "key_features": ["有旁路母线", "进线带计量柜", ...]
+    "type": "拓扑类型（如：单母线分段 / 双母线带旁路 / 链式集电线路 / 放射式馈线 / 桥型接线）",
+    "voltage_levels": ["所有出现的电压等级，如 35kV, 10kV, 0.4kV"],
+    "arrangement": "设备排列方向描述（如：进线在左侧→母线水平→馈线向下引出）",
+    "bus_configuration": "母线配置（单母线/双母线/无母线-链式），如为链式接线，请特别说明",
+    "incoming_lines": 进线回路数量,
+    "outgoing_lines": 出线回路数量,
+    "key_features": ["列举3-8个关键设计特征"],
+    "redundancy": "是否有冗余设计（备用回路/旁路/联络开关等）"
   }},
   "devices": [
     {{
-      "type": "断路器",
-      "symbol_id": "CB_3P",
-      "label_pattern": "QF{{}}",
-      "typical_positions": [{{"x": 500, "y": 800, "description": "高压进线侧"}}],
-      "count": 2,
-      "connection_rules": ["一端接母线，一端接电缆"]
+      "type": "设备类型（如：真空断路器、隔离开关、电流互感器、避雷器、电缆终端头、箱变、风机）",
+      "symbol_id": "对应的 AutoCAD 图块名或符号 ID（如 CB_3P, CT_CORE, LA_HV），无法确定写 unknown",
+      "label_pattern": "标注命名规则（如：QF{{}}, T{{}}, QS{{}}，用{{}}表示编号占位符），如果没有标注则写 无标注",
+      "count": 该类型设备在图中的总数，未全部可见则估算并标注 约X个,
+      "typical_position": {{"description": "设备在图纸中的典型位置描述", "coordinates": "如有坐标则填"}},
+      "connections": ["该设备典型接什么（上游→下游），如：一端接母线，一端接电缆"],
+      "manufacturer_info": "如果标注了厂家/型号信息，一并记录",
+      "notes": "设备特殊说明（如有铭牌参数、安装要求标记等）"
+    }}
+  ],
+  "cables_and_lines": [
+    {{
+      "cable_id": "电缆编号（如 CABLE-01, ZC-YJV22-3×240），截图中有则填",
+      "type": "电缆/导线类型（如：铜芯电缆、钢芯铝绞线、封闭母线）",
+      "specification": "规格型号（如 3×240mm², LGJ-240/30）",
+      "from_device": "起点设备",
+      "to_device": "终点设备",
+      "length": "电缆长度（如有标注）",
+      "routing": "敷设方式（如直埋、电缆沟、桥架、架空）"
     }}
   ],
   "layout_rules": [
-    "母线水平布置在图纸上方",
-    "同类型设备水平等距排列，间距 800mm",
-    "标注文字在设备右上方，字高 3.5mm"
+    "描述5-10条具体的布局规律。例如：",
+    "主母线水平布置在图纸上方占图纸宽度80%",
+    "所有断路器垂直排列，间距约 60-80mm",
+    "标注文字位于设备右上方，字高约 3.5mm",
+    "进线回路从左进入，出线回路向右引出",
+    "同电压等级设备集中在同一区域",
+    "导线拐弯均为直角或45度角",
+    "母线与分支线用不同线型/颜色区分"
   ],
   "annotation_style": {{
-    "font_height": 3.5,
-    "prefixes": {{"breaker": "QF", "transformer": "T", "disconnector": "QS"}},
-    "position": "top_right",
-    "layer": "ELEC-TEXT"
+    "font_height": 标注文字字高（mm）,
+    "font_family": "推断的字体（如 Simplex, HZTXT, ISOCP）",
+    "prefixes": {{"所有观察到的前缀规则，如：breaker→QF, transformer→T, disconnector→QS, CT→CT, PT→PT, cable→CABLE, bus→BUS"}},
+    "numbering_pattern": "编号规则（如：QF01, QF02... 顺序编号 / 按位置编号 / 无编号）",
+    "position": "标注位置：top_right/bottom_center/left/top_left",
+    "alignment": "标注对齐方式：左对齐/居中/右对齐",
+    "text_layer": "标注所在的图层名（如有）",
+    "leader_style": "指引线样式（有箭头/无箭头/圆点/斜线）"
   }},
   "connection_patterns": [
     {{
-      "from_type": "母线",
-      "to_type": "断路器",
-      "via": "导线",
-      "layer": "ELEC-WIRE",
-      "typical_length": 200
+      "from_type": "起点设备类型",
+      "to_type": "终点设备类型",
+      "via": "连接方式（导线/电缆/母线/跳线）",
+      "wire_type": "线型（实线/虚线/点划线）",
+      "wire_color_or_layer": "线所在的图层名或颜色（如有）",
+      "typical_length": 典型连接长度（mm）或 根据布局确定,
+      "junction_style": "连接点样式（圆点/方块/无标记/T接/十字交叉）",
+      "notes": "该连接的补充说明"
     }}
   ],
   "layer_spec": {{
-    "bus": "ELEC-BUS",
-    "wire": "ELEC-WIRE",
-    "device": "ELEC-DEVICE",
-    "text": "ELEC-TEXT"
+    "bus": "母线图层（如 ELEC-BUS）",
+    "wire": "导线图层（如 ELEC-WIRE）",
+    "device": "设备图层（如 ELEC-DEVICE）",
+    "text": "文字图层（如 ELEC-TEXT）",
+    "dimension": "尺寸标注图层",
+    "border": "图框图框图层",
+    "others": ["其他观察到的图层"]
+  }},
+  "bill_of_materials": {{
+    "has_bom_table": true或false，图中是否有材料清单表,
+    "position": "材料表的位置（如：图纸右下角/无材料表）",
+    "columns_observed": ["观察到的表头列名，如 序号, 名称, 型号规格, 单位, 数量, 备注"]
   }}
 }}
 ```
 
-只输出 JSON，不要其他内容。
-"""
+# 🔴 输出规则（必须严格遵守）
+
+1. **只输出 JSON**，不要任何解释性文字、不要```json```包裹、不要Markdown。
+2. **每个字段都要填充**，如果一个字段原样复制了示例值（如 "ELEC-BUS"），说明你没有认真分析——必须根据截图中真实情况填写。
+3. **devices 数组不能为空**，如果图中确实没有设备，请说明图中只有哪些元素（如导线、标注、图框）。
+4. **layout_rules 至少 5 条**，从截图分析中归纳。
+5. **description 至少 100 字**，全面描述图纸用途、结构、特点。
+6. 如果某些信息无法从截图中确定，标注为 "unknown" 或 "截图中未显示"，而不是留空。
+7. 电缆和导线信息极其重要，必须填入 cables_and_lines。
+
+记住：你的输出将直接决定 AI 绘图 Agent 能否**正确复现这张图纸**。详细信息越多，复现越准确。"""
 
 
 class LearnAgent:
@@ -494,20 +569,37 @@ class LearnAgent:
             return []
 
     def _open_drawing(self, file_path: str) -> bool:
-        """通过 AutoCAD COM 打开图纸"""
+        """通过 AutoCAD COM 打开用户上传的图纸文件"""
+        import pythoncom
         try:
+            pythoncom.CoInitialize()
+            # 确保已连接
             ok = autocad_connection.connect()
-            if not ok:
+            if not ok or not autocad_connection.is_connected:
+                logger.warning("AutoCAD 未连接")
                 return False
-            doc = autocad_connection.doc
-            if doc is None:
+
+            acad = autocad_connection.acad
+            if acad is None:
+                logger.warning("AutoCAD Application 对象为空")
                 return False
-            # 尝试用 COM 打开文件
+
+            abs_path = str(Path(file_path).resolve())
+            logger.info(f"正在 AutoCAD 中打开: {abs_path}")
+
+            # 通过 Documents 集合打开文件
             try:
-                doc.Open(file_path)
-            except Exception:
-                # 可能已经打开，激活即可
-                pass
+                new_doc = acad.Documents.Open(abs_path)
+                logger.info(f"已在 AutoCAD 中打开: {new_doc.Name}")
+            except Exception as e:
+                # 如果文件已经在当前标签页打开，忽略
+                err = str(e)[:200]
+                if "already open" in err.lower() or "eAlreadyOpen" in err:
+                    logger.info(f"文件已在 AutoCAD 中打开: {abs_path}")
+                else:
+                    logger.error(f"打开 DWG 失败: {err}")
+                    return False
+
             return True
         except Exception as e:
             logger.error(f"打开图纸失败: {e}")
@@ -607,7 +699,7 @@ class LearnAgent:
                     )
                 else:
                     analysis_str = json.dumps(analysis, ensure_ascii=False) if isinstance(analysis, (dict, list)) else str(analysis)
-                    screenshots_analysis_parts.append(f"### 截图 {shot['step']}（{shot['description']}）\n{analysis_str[:1000]}")
+                    screenshots_analysis_parts.append(f"### 截图 {shot['step']}（{shot['description']}）\n{analysis_str[:3000]}")
 
             # 如果所有截图都没有视觉分析，给 LLM 额外提示
             if vision_unsupported_count == len(self._screenshots) and self._screenshots:
@@ -622,8 +714,8 @@ class LearnAgent:
             user_feedback_str = "\n".join(self._user_feedback) if self._user_feedback else "（无）"
 
             prompt = ANALYSIS_PROMPT.format(
-                screenshots_analysis=screenshots_analysis[:8000],
-                dxf_text=(dxf_text or "")[:6000],
+                screenshots_analysis=screenshots_analysis[:16000],
+                dxf_text=(dxf_text or "")[:12000],
                 user_feedback=user_feedback_str,
             )
 
@@ -696,20 +788,55 @@ class LearnAgent:
         lines.append(f"## {pattern.get('name', '未命名模式')}")
         if pattern.get("description"):
             lines.append(f"\n{pattern['description']}")
+
+        # ── 拓扑 ──
         topo = pattern.get("topology", {})
         if topo:
-            lines.append(f"\n**拓扑类型**：{topo.get('type', '未知')}")
-            lines.append(f"**电压等级**：{', '.join(topo.get('voltage_levels', []))}")
+            lines.append(f"\n**拓扑**：{topo.get('type', '未知')} | 电压：{', '.join(topo.get('voltage_levels', []))}")
+            if topo.get("arrangement"):
+                lines.append(f"  排布：{topo['arrangement']}")
+            if topo.get("incoming_lines") or topo.get("outgoing_lines"):
+                lines.append(f"  回路：进线 {topo.get('incoming_lines', '?')} / 出线 {topo.get('outgoing_lines', '?')}")
+            if topo.get("key_features"):
+                lines.append(f"  特征：{'; '.join(topo['key_features'][:5])}")
+
+        # ── 设备 ──
         devices = pattern.get("devices", [])
         if devices:
             lines.append(f"\n**设备清单**（{len(devices)} 类）：")
-            for d in devices[:5]:
-                lines.append(f"  - {d.get('type', '?')}（标识：{d.get('label_pattern', '?')}，典型数量：{d.get('count', '?')}）")
+            for d in devices[:10]:
+                label = d.get('label_pattern', '?')
+                cnt = d.get('count', '?')
+                lines.append(f"  - {d.get('type', '?')} ×{cnt} 标注：{label}")
+
+        # ── 电缆 ──
+        cables = pattern.get("cables_and_lines", [])
+        if cables:
+            lines.append(f"\n**电缆/导线**（{len(cables)} 条）：")
+            for c in cables[:5]:
+                lines.append(f"  - {c.get('cable_id', '?')} {c.get('type', '?')} {c.get('specification', '')} "
+                             f"({c.get('from_device', '?')} → {c.get('to_device', '?')})")
+
+        # ── 布局规律 ──
         rules = pattern.get("layout_rules", [])
         if rules:
             lines.append(f"\n**布局规律**：")
-            for r in rules[:5]:
+            for r in rules[:8]:
                 lines.append(f"  - {r}")
+
+        # ── 标注风格 ──
+        anno = pattern.get("annotation_style", {})
+        if anno:
+            lines.append(f"\n**标注**：字高 {anno.get('font_height', '?')}mm · {anno.get('font_family', '?')} · {anno.get('position', '?')}")
+
+        # ── 制图习惯 ──
+        habits = pattern.get("drawing_habits", {})
+        if habits:
+            lines.append(f"\n**制图习惯**：{habits.get('page_size', '?')} · 比例 {habits.get('scale', '?')} · 单位 {habits.get('unit', '?')}")
+            if habits.get("other_conventions"):
+                for c in habits["other_conventions"][:3]:
+                    lines.append(f"  - {c}")
+
         return "\n".join(lines)
 
     def _event(self, event_type: str, **kwargs) -> dict:
