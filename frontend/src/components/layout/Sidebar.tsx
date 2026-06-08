@@ -274,6 +274,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
     { icon: <PencilIcon className="w-5 h-5" />, label: '字体线型', desc: '全局配置', path: '/font-line' },
     { icon: <DocumentArrowUpIcon className="w-5 h-5" />, label: '厂家资料', desc: '设备参数', path: '/vendor-docs' },
     { icon: <AcademicCapIcon className="w-5 h-5" />, label: '学习模式', desc: '图纸摄取', path: '/learn' },
+    { icon: <BookOpenIcon className="w-5 h-5" />, label: '知识库', desc: '手册规程', path: '/knowledge' },
     { icon: <Cog6ToothIcon className="w-5 h-5" />, label: '设置', desc: 'LLM / CAD', path: '/settings' },
   ];
 

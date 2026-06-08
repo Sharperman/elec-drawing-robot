@@ -86,12 +86,13 @@ class RAGRetriever:
             logger.warning(f"RAG retrieval failed for symbols: {e}")
             return []
 
-    async def build_context(self, query: str) -> str:
+    async def build_context(self, query: str, include_knowledge: bool = True) -> str:
         """
         构建完整的规范上下文字符串，注入 Agent Prompt
 
         Args:
             query: 用户查询
+            include_knowledge: 是否检索用户知识库（默认 True）
 
         Returns:
             格式化的上下文字符串
@@ -116,7 +117,49 @@ class RAGRetriever:
                     f"描述: {item['document'][:100]}"
                 )
 
+        # 用户知识库检索
+        if include_knowledge:
+            knowledge_items = await self.retrieve_knowledge(query, top_k=3)
+            if knowledge_items:
+                context_parts.append("\n【用户知识库（设计手册/规程/策划文件）】")
+                for item in knowledge_items:
+                    meta = item.get("metadata", {})
+                    source = meta.get("filename", "未知文档")
+                    context_parts.append(
+                        f"📄 {source} (score={item['score']:.2f}):\n"
+                        f"{item['document'][:300]}"
+                    )
+
         return "\n".join(context_parts) if context_parts else "暂无相关规范信息"
+
+    async def retrieve_knowledge(
+        self,
+        query: str,
+        top_k: int = 3,
+    ) -> list[dict]:
+        """
+        从用户知识库检索相关文档片段
+
+        Args:
+            query: 查询文本
+            top_k: 返回片段数
+
+        Returns:
+            [{document, metadata, score}, ...]
+        """
+        try:
+            results = await vector_store.similarity_search(
+                collection_name="user_knowledge",
+                query=query,
+                top_k=top_k,
+            )
+            return [
+                {"document": r["document"], "metadata": r.get("metadata", {}), "score": r["score"]}
+                for r in results if r["score"] > 0.4
+            ]
+        except Exception as e:
+            logger.warning(f"Knowledge retrieval failed: {e}")
+            return []
 
     async def index_standard(self, standard_id: int, content: str) -> None:
         """

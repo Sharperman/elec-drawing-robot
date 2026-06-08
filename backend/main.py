@@ -13,7 +13,7 @@ from config import settings
 from utils.logger import setup_logger
 from models.session import create_all_tables
 from api.middleware import register_exception_handlers
-from api.routes import chat, recognition, autocad, standards, symbols, feedback, logs, templates, vendor_docs, llm, learn
+from api.routes import chat, recognition, autocad, standards, symbols, feedback, logs, templates, vendor_docs, llm, learn, knowledge
 
 # 初始化日志（最先执行）
 logger = setup_logger()
@@ -122,6 +122,7 @@ app.include_router(templates.router, prefix="/api/templates", tags=["Templates"]
 app.include_router(vendor_docs.router, prefix="/api/vendor-docs", tags=["VendorDocs"])
 app.include_router(llm.router, prefix="/api/llm", tags=["LLM"])
 app.include_router(learn.router, prefix="/api/learn", tags=["Learn"])
+app.include_router(knowledge.router, prefix="/api/knowledge", tags=["Knowledge"])
 
 
 # ============================================================

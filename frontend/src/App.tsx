@@ -21,6 +21,7 @@ const TemplateLibrary = lazy(() => import('@/components/config/TemplateLibrary')
 const FontLineConfig = lazy(() => import('@/components/config/FontLineConfig'));
 const VendorDocParser = lazy(() => import('@/components/config/VendorDocParser'));
 const LearnPage = lazy(() => import('@/components/config/LearnPage'));
+const KnowledgeLibrary = lazy(() => import('@/components/config/KnowledgeLibrary'));
 
 const PageLoader: React.FC = () => (
   <div className="flex items-center justify-center h-full bg-gray-950">
@@ -155,6 +156,16 @@ const App: React.FC = () => {
             <AppShellWrapper>
               <Suspense fallback={<PageLoader />}>
                 <LearnPage />
+              </Suspense>
+            </AppShellWrapper>
+          }
+        />
+        <Route
+          path="/knowledge"
+          element={
+            <AppShellWrapper>
+              <Suspense fallback={<PageLoader />}>
+                <KnowledgeLibrary />
               </Suspense>
             </AppShellWrapper>
           }

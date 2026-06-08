@@ -8,6 +8,7 @@ from models.standard import DrawingStandard, LayerConfig
 from models.feedback import UserFeedback, LearnedRule
 from models.llm_provider import LLMProvider
 from models.drawing_pattern import DrawingPattern
+from models.knowledge_document import KnowledgeDocument
 
 __all__ = [
     "DrawingSession",
@@ -19,4 +20,5 @@ __all__ = [
     "LearnedRule",
     "LLMProvider",
     "DrawingPattern",
+    "KnowledgeDocument",
 ]

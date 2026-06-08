@@ -55,39 +55,32 @@ async def learn_stream(
     - error:      错误
     """
     async def generate() -> AsyncGenerator[str, None]:
-        """在后台线程运行同步 learn_stream，通过 asyncio.Queue 桥接，避免阻塞事件循环。"""
-        queue: asyncio.Queue = asyncio.Queue()
+        """在 async 协程中运行 learn_stream。
+        AutoCAD COM 操作在主线程执行，LLM 调用通过线程池异步执行。"""
+        import asyncio
+        import concurrent.futures
 
-        def _run_in_thread():
-            """在线程中执行同步 LLM 调用，结果放入队列"""
-            import pythoncom
-            pythoncom.CoInitialize()  # COM 必须在当前线程初始化
-            try:
-                agent = get_learn_agent(session_id)
-                if file_id and os.path.exists(file_id):
-                    for event in agent.learn_stream(file_id):
-                        queue.put_nowait(("data", event))
-                else:
-                    queue.put_nowait(("data", {"type": "error", "error": "请先上传参考图纸"}))
-            except Exception as e:
-                logger.error(f"Learn stream error: {e}")
-                import traceback
-                traceback.print_exc()
-                queue.put_nowait(("data", {"type": "error", "error": f"学习过程出错: {str(e)[:200]}"}))
-            finally:
-                pythoncom.CoUninitialize()
-                queue.put_nowait(("done", None))
+        # 创建一个专用线程池用于 LLM 调用（避免阻塞事件循环）
+        llm_executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
 
-        # 在独立线程中运行，避免阻塞 asyncio 事件循环
-        loop = asyncio.get_running_loop()
-        loop.run_in_executor(None, _run_in_thread)
-
-        # 从队列消费，异步 yield
-        while True:
-            msg_type, payload = await queue.get()
-            if msg_type == "done":
-                break
-            yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+        try:
+            agent = get_learn_agent(session_id)
+            if file_id and os.path.exists(file_id):
+                # 设置线程池，让 LearnAgent 内部将 LLM 调用 offload
+                agent._llm_executor = llm_executor
+                for event in agent.learn_stream(file_id):
+                    yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+                    await asyncio.sleep(0)  # 让出事件循环，使 health check 等不受阻塞
+            else:
+                yield f"data: {json.dumps({'type': 'error', 'error': '请先上传参考图纸'}, ensure_ascii=False)}\n\n"
+        except Exception as e:
+            logger.error(f"Learn stream error: {e}")
+            import traceback
+            traceback.print_exc()
+            err_event = {"type": "error", "error": f"学习过程出错: {str(e)[:200]}"}
+            yield f"data: {json.dumps(err_event, ensure_ascii=False)}\n\n"
+        finally:
+            llm_executor.shutdown(wait=False)
 
     return StreamingResponse(
         generate(),

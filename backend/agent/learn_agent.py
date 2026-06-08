@@ -225,6 +225,7 @@ class LearnAgent:
         self._pattern: Optional[dict] = None       # 正在构建的 pattern
         self._user_feedback: list[str] = []       # 用户补充信息
         self._current_file: Optional[str] = None   # 当前学习文件
+        self._llm_executor = None                  # 外部注入的线程池（用于 LLM 异步调用）
 
     # ── 公开方法 ────────────────────────────────────────
 
@@ -615,7 +616,8 @@ class LearnAgent:
             return None
 
     def _analyze_screenshot(self, screenshot_b64: str, description: str) -> dict:
-        """调用视觉 LLM 分析单张截图。优先使用数据库中配置的多模态 LLM。"""
+        """调用视觉 LLM 分析单张截图。如果外部注入了线程池，则在后台线程执行 LLM 调用，
+        避免阻塞主线程（AutoCAD COM 在主线程）。"""
         db = None
         try:
             # capture() 返回的 base64 可能带 data URI 前缀，需要剥离
@@ -628,13 +630,21 @@ class LearnAgent:
                 {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{screenshot_b64}", "detail": "high"}},
                 {"type": "text", "text": f"这是电气图纸的「{description}」视图。\n\n请识别：1. 可见的电气设备（类型、标注）2. 文字标注内容 3. 连接关系 4. 该区域的布局特点\n\n用 JSON 格式输出。"},
             ])
-            resp = llm.invoke([msg])
+
+            # 如果外部注入了线程池，LLM 调用在后台线程执行
+            if self._llm_executor:
+                def _invoke():
+                    return llm.invoke([msg])
+                future = self._llm_executor.submit(_invoke)
+                resp = future.result(timeout=120)  # 2分钟超时
+            else:
+                resp = llm.invoke([msg])
+
             content = resp.content if hasattr(resp, "content") else str(resp)
             return self._parse_json(content)
         except Exception as e:
             err_str = str(e)
             logger.error(f"视觉分析失败 ({description}): {err_str}")
-            # 判断是否为 LLM 不支持图片输入
             if "support image input" in err_str or "No endpoints found" in err_str:
                 return {"vision_unsupported": True, "error": "当前配置的 LLM 不支持图片输入"}
             return {"error": err_str}
@@ -721,10 +731,22 @@ class LearnAgent:
 
             db2 = get_session_local()()
             llm = create_primary_llm(db=db2)
-            resp = llm.invoke([
-                SystemMessage(content=SYSTEM_PROMPT),
-                HumanMessage(content=prompt),
-            ])
+
+            # 如果外部注入了线程池，LLM 调用在后台线程执行（避免阻塞主线程的 AutoCAD COM）
+            if self._llm_executor:
+                def _invoke():
+                    return llm.invoke([
+                        SystemMessage(content=SYSTEM_PROMPT),
+                        HumanMessage(content=prompt),
+                    ])
+                future = self._llm_executor.submit(_invoke)
+                resp = future.result(timeout=180)  # Pattern 生成可能较慢，3分钟超时
+            else:
+                resp = llm.invoke([
+                    SystemMessage(content=SYSTEM_PROMPT),
+                    HumanMessage(content=prompt),
+                ])
+
             content = resp.content if hasattr(resp, "content") else str(resp)
             logger.debug(f"Pattern LLM raw output ({len(content)} chars): {content[:300]}")
             parsed = self._parse_json(content)

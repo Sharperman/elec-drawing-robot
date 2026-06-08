@@ -48,6 +48,10 @@ class VectorStore:
                 name=settings.CHROMA_COLLECTION_SYMBOLS,
                 metadata={"hnsw:space": "cosine"},
             )
+            self._client.get_or_create_collection(
+                name="user_knowledge",
+                metadata={"hnsw:space": "cosine"},
+            )
 
             self._initialized = True
             logger.info(f"VectorStore initialized at {settings.CHROMA_PATH}")
@@ -166,6 +170,27 @@ class VectorStore:
             logger.info(f"Collection '{collection_name}' deleted")
         except Exception as e:
             logger.warning(f"Failed to delete collection '{collection_name}': {e}")
+
+    def get_chunks_by_doc(self, doc_id: int) -> list[dict]:
+        """获取指定文档在 ChromaDB 中的所有分块"""
+        self._ensure_initialized()
+        try:
+            collection = self._client.get_collection("user_knowledge")
+            result = collection.get(where={"doc_id": str(doc_id)})
+            chunks = []
+            ids = result.get("ids", [])
+            docs = result.get("documents", [])
+            metas = result.get("metadatas", [])
+            for i in range(len(ids)):
+                chunks.append({
+                    "id": ids[i],
+                    "text": docs[i] if i < len(docs) else "",
+                    "metadata": metas[i] if i < len(metas) else {},
+                })
+            return chunks
+        except Exception as e:
+            logger.warning(f"获取文档分块失败: {e}")
+            return []
 
 
 # 全局单例
