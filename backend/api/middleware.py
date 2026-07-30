@@ -8,7 +8,7 @@ import time
 import traceback
 from typing import Callable
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from loguru import logger
 
@@ -52,6 +52,20 @@ def register_exception_handlers(app: FastAPI) -> None:
                 "message": str(exc),
                 "data": None,
             },
+        )
+
+    @app.exception_handler(HTTPException)
+    async def http_exception_handler(request: Request, exc: HTTPException):
+        """统一处理 HTTPException，转为标准 ApiResponse 格式"""
+        logger.warning(f"HTTPException {exc.status_code}: {exc.detail}")
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "code": exc.status_code,
+                "message": str(exc.detail),
+                "data": None,
+            },
+            headers=getattr(exc, "headers", None),
         )
 
     @app.exception_handler(ConnectionError)

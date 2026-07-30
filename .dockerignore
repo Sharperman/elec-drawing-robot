@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+.eggs/
+*.egg-info/
+
+# Node
+node_modules/
+frontend/dist/
+frontend/dist-electron/
+frontend/.vite/
+
+# Data
+*.db
+*.sqlite
+*.db-wal
+*.db-shm
+backend/data/chroma/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Git
+.git/
+.gitattributes
+.gitignore
+
+# Docs
+docs/
+*.md
+
+# Tests
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# CI
+.github/

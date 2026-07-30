@@ -1,0 +1,184 @@
+name: Deploy Staging
+
+on:
+  push:
+    branches: [develop]
+    paths-ignore:
+      - "docs/**"
+      - "*.md"
+  workflow_dispatch:
+    inputs:
+      deploy_backend:
+        description: "Deploy backend API server"
+        type: boolean
+        default: true
+      deploy_frontend:
+        description: "Deploy frontend web preview"
+        type: boolean
+        default: true
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+env:
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "22"
+
+jobs:
+  # ============================================================
+  #  Build & publish frontend preview
+  # ============================================================
+  frontend-preview:
+    name: "Frontend Preview"
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.deploy_frontend }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    environment:
+      name: staging
+      url: ${{ steps.deploy.outputs.page_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install & Build
+        working-directory: frontend
+        env:
+          VITE_API_BASE_URL: ${{ vars.STAGING_API_URL || '/api' }}
+        run: |
+          npm ci
+          npm run build
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload to Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/dist
+
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
+
+  # ============================================================
+  #  Build & push Docker image (backend)
+  # ============================================================
+  backend-docker:
+    name: "Backend Docker Image"
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.deploy_backend }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/elec-drawing-robot-backend
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/develop' }}
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            PYTHON_VERSION=${{ env.PYTHON_VERSION }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ============================================================
+  #  Build staging Electron artifacts (Windows only)
+  # ============================================================
+  staging-artifacts:
+    name: "Staging Build (Windows)"
+    runs-on: windows-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Setup Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Build Electron (draft, not published)
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+          npx electron-builder --win nsis:x64 --publish never
+
+      - name: Upload staging build
+        uses: actions/upload-artifact@v4
+        with:
+          name: elec-drawing-robot-staging
+          path: frontend/release/*.exe
+          retention-days: 14
+
+  # ============================================================
+  #  Notification
+  # ============================================================
+  notify:
+    name: "Notify"
+    needs: [frontend-preview, backend-docker, staging-artifacts]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Summary
+        run: |
+          echo "## Staging Deploy Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend Preview | ${{ needs.frontend-preview.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend Docker | ${{ needs.backend-docker.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Staging Build | ${{ needs.staging-artifacts.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY

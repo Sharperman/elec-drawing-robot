@@ -1,0 +1,232 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths-ignore:
+      - "docs/**"
+      - "*.md"
+      - ".gitattributes"
+      - ".gitignore"
+  pull_request:
+    branches: [main, develop]
+    paths-ignore:
+      - "docs/**"
+      - "*.md"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "22"
+
+jobs:
+  # ============================================================
+  #  Python Backend — lint + test
+  # ============================================================
+  backend:
+    name: "Backend (py${{ matrix.python-version }})"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+
+    defaults:
+      run:
+        working-directory: .
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install ruff pytest-cov
+
+      - name: Lint with ruff
+        run: ruff check backend/ tests/ --select E,F,W,I,N,UP --ignore E501
+
+      - name: Type check with mypy (basic)
+        continue-on-error: true
+        run: |
+          pip install mypy
+          mypy backend/ --ignore-missing-imports --no-error-summary || true
+
+      - name: Run pytest with coverage
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-test-placeholder' }}
+          MODEL_NAME: "gpt-4o-mini"
+          OPENAI_BASE_URL: "https://api.openai.com/v1"
+          DEBUG: "true"
+          DB_PATH: ":memory:"
+          CHROMA_PATH: "/tmp/chroma-test"
+          AUTOCAD_TIMEOUT: "1"
+        run: |
+          pytest tests/ \
+            -v --tb=short \
+            --cov=backend \
+            --cov-report=term-missing \
+            --cov-report=xml:coverage.xml \
+            --cov-fail-under=60 \
+            -k "not autocad and not cad and not com" \
+            --timeout=120 \
+            -p no:cacheprovider
+
+      - name: Upload coverage to Codecov
+        if: matrix.python-version == '3.12'
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.xml
+          flags: backend
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Upload coverage artifact
+        if: always() && matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-backend-py${{ matrix.python-version }}
+          path: coverage.xml
+          retention-days: 7
+
+  # ============================================================
+  #  Frontend — typecheck + build
+  # ============================================================
+  frontend:
+    name: "Frontend (node${{ matrix.node-version }})"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["22"]
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript typecheck
+        run: npm run typecheck
+
+      - name: Build Vite
+        run: npm run build
+
+      - name: Upload build artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist-node${{ matrix.node-version }}
+          path: frontend/dist/
+          retention-days: 7
+
+  # ============================================================
+  #  Integration smoke test
+  # ============================================================
+  integration:
+    name: "Integration Smoke"
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    if: always() && needs.backend.result == 'success'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install backend deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Start backend and verify health
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-test-placeholder' }}
+          MODEL_NAME: "gpt-4o-mini"
+          DEBUG: "true"
+          DB_PATH: ":memory:"
+          CHROMA_PATH: "/tmp/chroma-smoke"
+          HOST: "127.0.0.1"
+          PORT: "8765"
+        run: |
+          python -m uvicorn backend.main:app --host 127.0.0.1 --port 8765 &
+          BACKEND_PID=$!
+
+          # Wait for backend to be ready (max 30s)
+          for i in $(seq 1 30); do
+            if curl -s http://127.0.0.1:8765/health | grep -q "ok"; then
+              echo "Backend ready after ${i}s"
+              break
+            fi
+            if [ $i -eq 30 ]; then
+              echo "ERROR: Backend failed to start"
+              kill $BACKEND_PID 2>/dev/null || true
+              exit 1
+            fi
+            sleep 1
+          done
+
+          # Health check
+          HEALTH=$(curl -s http://127.0.0.1:8765/health)
+          echo "Health: $HEALTH"
+
+          # Verify API endpoints
+          curl -s http://127.0.0.1:8765/api/symbols | python -c "import sys,json; d=json.load(sys.stdin); print(f'Symbols API OK: {len(d.get(\"symbols\",d))} items')"
+
+          kill $BACKEND_PID 2>/dev/null || true
+          echo "Smoke test PASSED"
+
+  # ============================================================
+  #  Final gate
+  # ============================================================
+  gate:
+    name: "CI Gate"
+    needs: [backend, frontend, integration]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check results
+        run: |
+          echo "Backend:   ${{ needs.backend.result }}"
+          echo "Frontend:  ${{ needs.frontend.result }}"
+          echo "Integration: ${{ needs.integration.result }}"
+
+          if [ "${{ needs.backend.result }}" = "success" ] && \
+             [ "${{ needs.frontend.result }}" = "success" ]; then
+            echo "ALL CHECKS PASSED"
+            exit 0
+          else
+            echo "SOME CHECKS FAILED"
+            exit 1
+          fi

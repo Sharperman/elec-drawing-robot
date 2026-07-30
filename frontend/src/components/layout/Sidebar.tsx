@@ -13,6 +13,7 @@ import {
   ChevronLeftIcon, BookOpenIcon, RectangleGroupIcon,
   MagnifyingGlassIcon, PencilIcon, XMarkIcon, CommandLineIcon,
   SparklesIcon, Squares2X2Icon, DocumentArrowUpIcon, AcademicCapIcon,
+  BoltIcon,
 } from '@heroicons/react/24/outline';
 import { ChatBubbleLeftRightIcon as ChatBubbleLeftRightIconSolid } from '@heroicons/react/24/solid';
 
@@ -275,6 +276,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onCollapse }) => {
     { icon: <DocumentArrowUpIcon className="w-5 h-5" />, label: '厂家资料', desc: '设备参数', path: '/vendor-docs' },
     { icon: <AcademicCapIcon className="w-5 h-5" />, label: '学习模式', desc: '图纸摄取', path: '/learn' },
     { icon: <BookOpenIcon className="w-5 h-5" />, label: '知识库', desc: '手册规程', path: '/knowledge' },
+    { icon: <BoltIcon className="w-5 h-5" />, label: 'Hermes', desc: '桌面操作', path: '/hermes' },
     { icon: <Cog6ToothIcon className="w-5 h-5" />, label: '设置', desc: 'LLM / CAD', path: '/settings' },
   ];
 

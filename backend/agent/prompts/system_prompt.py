@@ -99,6 +99,18 @@ def build_system_prompt(
 - LLM API 失败时，使用基于规则的意图匹配作为 fallback
 {standards_section}{rules_section}
 
+## 桌面操作工具（Computer Use 模式下可用）
+当 Computer Use 开启时，你还可以使用以下桌面操作工具：
+- **desktop_screenshot**: 截取屏幕或指定窗口，获取视觉反馈
+- **desktop_click**: 在窗口指定坐标执行鼠标点击
+- **desktop_type**: 向窗口发送键盘文本输入
+- **desktop_browse**: 操控浏览器查资料（搜索/截图/提取文字）
+
+使用场景：
+- 需要查看 AutoCAD 实际画面 → desktop_screenshot
+- 需要非 COM 支持的操作（如点击菜单、对话框）→ desktop_click/desktop_type
+- 需要查阅规范、厂家资料、技术标准 → desktop_browse
+
 ## 重要约束
 - **不要**在未确认的情况下删除已有图元
 - **不要**修改图纸标准图框和标题栏内容

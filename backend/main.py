@@ -3,17 +3,19 @@ FastAPI 应用入口
 注册所有路由、CORS、lifespan 事件、健康检查
 """
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import AsyncGenerator
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
 from utils.logger import setup_logger
 from models.session import create_all_tables
 from api.middleware import register_exception_handlers
-from api.routes import chat, recognition, autocad, standards, symbols, feedback, logs, templates, vendor_docs, llm, learn, knowledge
+from api.routes import chat, recognition, autocad, standards, symbols, feedback, logs, templates, vendor_docs, llm, learn, knowledge, recording
+from hermes.router import router as hermes_router
 
 # 初始化日志（最先执行）
 logger = setup_logger()
@@ -64,16 +66,69 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     logger.info("=== Application startup complete ===")
 
+    # 4. 每日数据库自动备份（保留最近 7 天）
+    try:
+        import shutil
+        from datetime import date as _date, timedelta as _td
+        db_path = Path(settings.DB_PATH)
+        backup_dir = db_path.parent / "backups"
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        today_backup = backup_dir / f"elec_robot.{_date.today().isoformat()}.bak"
+        if not today_backup.exists():
+            shutil.copy2(db_path, today_backup)
+            logger.info(f"Daily backup created: {today_backup}")
+            # 清理 7 天前的备份
+            cutoff = _date.today() - _td(days=7)
+            for old in backup_dir.glob("elec_robot.*.bak"):
+                try:
+                    old_date = _date.fromisoformat(old.stem.split(".", 1)[1])
+                    if old_date < cutoff:
+                        old.unlink()
+                        logger.info(f"Removed old backup: {old.name}")
+                except (ValueError, IndexError):
+                    pass
+    except Exception as e:
+        logger.warning(f"Database backup failed (non-fatal): {e}")
+
+    # 5. 标记服务就绪
+    app.state.ready = True
+    app.state.started_at = __import__("datetime").datetime.utcnow().isoformat()
+
     yield
 
     # ---- shutdown ----
     logger.info("=== ElecDrawingRobot Backend Shutting Down ===")
+
+    # 1. 断开 AutoCAD
     try:
         from autocad.connection import autocad_connection
         autocad_connection.disconnect()
         logger.info("AutoCAD connection closed")
     except Exception as e:
         logger.warning(f"AutoCAD disconnect failed: {e}")
+
+    # 2. SQLite WAL checkpoint（防止未落盘数据丢失）
+    try:
+        from sqlalchemy import text as _sa_text
+        from models.session import get_engine
+        engine = get_engine()
+        with engine.connect() as conn:
+            result = conn.execute(_sa_text("PRAGMA wal_checkpoint(TRUNCATE)"))
+            conn.execute(_sa_text("PRAGMA optimize"))
+            conn.commit()
+            logger.info(f"Database checkpoint completed: {result.fetchall()}")
+    except Exception as e:
+        logger.warning(f"Database shutdown failed (non-fatal): {e}")
+
+    # 3. ChromaDB 持久化
+    try:
+        from knowledge.vector_store import vector_store
+        vector_store.persist()
+        logger.info("Vector store persisted")
+    except Exception as e:
+        logger.warning(f"Vector store persist failed (non-fatal): {e}")
+
+    logger.info("=== Shutdown complete ===")
 
 
 # ============================================================
@@ -123,6 +178,8 @@ app.include_router(vendor_docs.router, prefix="/api/vendor-docs", tags=["VendorD
 app.include_router(llm.router, prefix="/api/llm", tags=["LLM"])
 app.include_router(learn.router, prefix="/api/learn", tags=["Learn"])
 app.include_router(knowledge.router, prefix="/api/knowledge", tags=["Knowledge"])
+app.include_router(recording.router, prefix="/api/recording", tags=["Recording"])
+app.include_router(hermes_router, prefix="/api/hermes", tags=["Hermes"])
 
 
 # ============================================================
@@ -130,9 +187,14 @@ app.include_router(knowledge.router, prefix="/api/knowledge", tags=["Knowledge"]
 # ============================================================
 
 @app.get("/health", tags=["Health"])
-async def health_check() -> dict:
-    """健康检查：前端 Electron 主进程用于判断后端是否就绪"""
-    return {"status": "ok", "version": "0.1.0"}
+async def health_check(request: Request) -> dict:
+    """健康检查：返回服务状态和就绪标志"""
+    return {
+        "status": "ok",
+        "version": "0.1.0",
+        "ready": getattr(request.app.state, "ready", False),
+        "started_at": getattr(request.app.state, "started_at", None),
+    }
 
 
 @app.get("/", tags=["Health"])

@@ -1,0 +1,27 @@
+{
+  "categories": [
+    {
+      "title": "## 🚀 新功能",
+      "labels": ["feature", "feat", "enhancement"]
+    },
+    {
+      "title": "## 🐛 Bug 修复",
+      "labels": ["bug", "fix", "bugfix"]
+    },
+    {
+      "title": "## 📚 文档",
+      "labels": ["docs", "documentation"]
+    },
+    {
+      "title": "## 🔧 维护",
+      "labels": ["chore", "refactor", "ci", "test", "perf", "style"]
+    }
+  ],
+  "ignore_labels": ["duplicate", "wontfix", "invalid"],
+  "sort": "ASC",
+  "template": "${{CHANGELOG}}",
+  "pr_template": "- ${{TITLE}} (#${{NUMBER}})",
+  "empty_template": "- 无相关 PR",
+  "max_pull_requests": 50,
+  "max_back_track_time_days": 90
+}

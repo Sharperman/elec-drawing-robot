@@ -1,0 +1,48 @@
+# ============================================================
+# Ruff configuration — Python linting & formatting
+# ============================================================
+
+target-version = "py312"
+
+# ── Lint rules ──────────────────────────────────────────────
+[lint]
+select = [
+    "E",     # pycodestyle errors
+    "F",     # pyflakes
+    "W",     # pycodestyle warnings
+    "I",     # isort (import sorting)
+    "N",     # pep8-naming
+    "UP",    # pyupgrade (modern syntax)
+    "B",     # flake8-bugbear
+    "C4",    # flake8-comprehensions
+    "SIM",   # flake8-simplify
+    "TCH",   # flake8-type-checking
+    "RUF",   # ruff-specific rules
+]
+
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "B008",   # do not perform function calls in argument defaults
+    "RUF001", # ambiguous unicode characters in strings
+    "RUF002", # ambiguous unicode characters in docstrings
+]
+
+# Allow fix for all rules
+fixable = ["ALL"]
+unfixable = []
+
+# ── Per-file ignores ────────────────────────────────────────
+[lint.per-file-ignores]
+"tests/**" = ["N802", "N803", "N806"]  # relaxed naming for test files
+"backend/alembic/**" = ["N802", "N806"]
+
+# ── isort settings ──────────────────────────────────────────
+[lint.isort]
+known-first-party = ["backend"]
+force-sort-within-sections = true
+
+# ── Formatting ──────────────────────────────────────────────
+[format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"

@@ -6,11 +6,14 @@ from pathlib import Path
 from typing import List
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field
+from pydantic import Field, model_validator
 
 
-# 项目根目录（backend/ 的上一级）
-ROOT_DIR = Path(__file__).parent.parent
+# 关键路径常量
+ROOT_DIR = Path(__file__).parent.parent                        # elec-drawing-robot/
+DATA_DIR = Path(__file__).parent / "data"                       # backend/data/（统一数据目录）
+LOG_DIR_DEFAULT = ROOT_DIR / "logs"                             # 日志目录
+YOLO_MODEL_DIR = Path(__file__).parent / "recognition" / "models"
 
 
 class Settings(BaseSettings):
@@ -57,13 +60,13 @@ class Settings(BaseSettings):
 
     # ---- 数据库 ----
     DB_PATH: str = Field(
-        default=str(ROOT_DIR / "data" / "elec_robot.db"),
+        default=str(DATA_DIR / "db" / "elec_robot.db"),
         description="SQLite 数据库文件路径",
     )
 
     # ---- ChromaDB ----
     CHROMA_PATH: str = Field(
-        default=str(ROOT_DIR / "data" / "chroma"),
+        default=str(DATA_DIR / "chroma"),
         description="ChromaDB 持久化目录",
     )
     CHROMA_COLLECTION_STANDARDS: str = Field(
@@ -87,7 +90,7 @@ class Settings(BaseSettings):
 
     # ---- YOLOv8 ----
     YOLO_MODEL_PATH: str = Field(
-        default=str(ROOT_DIR / "backend" / "recognition" / "models" / "elec_symbol_yolov8.pt"),
+        default=str(YOLO_MODEL_DIR / "elec_symbol_yolov8.pt"),
         description="YOLOv8 模型文件路径",
     )
     YOLO_CONFIDENCE_THRESHOLD: float = Field(
@@ -101,10 +104,7 @@ class Settings(BaseSettings):
 
     # ---- 日志 ----
     LOG_LEVEL: str = Field(default="INFO", description="日志级别")
-    LOG_DIR: str = Field(
-        default=str(ROOT_DIR / "logs"),
-        description="日志文件目录",
-    )
+    LOG_DIR: str = Field(default=str(LOG_DIR_DEFAULT), description="日志文件目录")
     LOG_ROTATION: str = Field(default="10 MB", description="日志文件轮转阈值")
     LOG_RETENTION: str = Field(default="30 days", description="日志保留周期")
 
@@ -119,13 +119,13 @@ class Settings(BaseSettings):
 
     # ---- 文件上传 ----
     UPLOAD_DIR: str = Field(
-        default=str(ROOT_DIR / "data" / "uploads"),
+        default=str(DATA_DIR / "uploads"),
         description="文件上传目录（参考图纸等）",
     )
 
     # ---- 学习模式 ----
     LEARN_THUMB_DIR: str = Field(
-        default=str(ROOT_DIR / "data" / "pattern_thumbnails"),
+        default=str(DATA_DIR / "pattern_thumbnails"),
         description="学习模式缩略图目录",
     )
 
@@ -134,9 +134,26 @@ class Settings(BaseSettings):
 settings = Settings()
 
 # 确保数据目录存在
-Path(settings.DB_PATH).parent.mkdir(parents=True, exist_ok=True)
-Path(settings.CHROMA_PATH).mkdir(parents=True, exist_ok=True)
-Path(settings.LOG_DIR).mkdir(parents=True, exist_ok=True)
-Path(settings.UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
-Path(settings.LEARN_THUMB_DIR).mkdir(parents=True, exist_ok=True)
+for _dir in [settings.DB_PATH, settings.CHROMA_PATH, settings.LOG_DIR, settings.UPLOAD_DIR, settings.LEARN_THUMB_DIR]:
+    p = Path(_dir)
+    if "." in p.name:
+        p = p.parent  # 文件路径取其父目录
+    p.mkdir(parents=True, exist_ok=True)
+
+# 启动时配置校验（P2-9）
+import sys as _sys
+
+_errors = []
+if not settings.OPENAI_API_KEY:
+    _errors.append("OPENAI_API_KEY 未设置，LLM 功能将不可用")
+if not settings.OPENAI_BASE_URL:
+    _errors.append("OPENAI_BASE_URL 未设置")
+if not settings.MODEL_NAME:
+    _errors.append("MODEL_NAME 未设置")
+
+if _errors:
+    import logging
+    _log = logging.getLogger("config")
+    for err in _errors:
+        _log.warning(f"⚠️  配置警告: {err}")
 

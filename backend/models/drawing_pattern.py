@@ -1,18 +1,61 @@
 """
-DrawingPattern 数据模型
-存储从参考图纸中学习到的图纸模式，
-供后续绘图时作为参考模板使用。
+DrawingPattern 数据模型 + JSON Schema 校验
+存储从参考图纸中学习到的图纸模式
 """
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List, Dict, Any
 
 from sqlalchemy import (
     Column, Integer, String, Text, Boolean,
     DateTime, ForeignKey, Index,
 )
 from sqlalchemy.sql import func
+from pydantic import BaseModel, Field, ValidationError
+from loguru import logger
 
 from models.session import Base
+
+
+# ─── JSON 字段 Pydantic Schema ─────────────────────────────────
+
+class TopologySchema(BaseModel):
+    type: Optional[str] = Field(None, description="拓扑类型")
+    voltage_levels: Optional[List[str]] = None
+
+
+class DeviceSchema(BaseModel):
+    type: str = Field(..., description="设备类型")
+    label_pattern: Optional[str] = None
+    count: Optional[int] = None
+
+
+class AnnotationStyleSchema(BaseModel):
+    font_height: Optional[float] = None
+    prefixes: Optional[Dict[str, str]] = None
+    position: Optional[str] = None
+
+
+_PATTERN_SCHEMAS: Dict[str, type[BaseModel]] = {
+    "topology": TopologySchema,
+    "annotation_style": AnnotationStyleSchema,
+}
+
+
+def _validate_pattern_field(key: str, value: Any) -> Any:
+    """校验 JSON 字段，失败时只记录 warning"""
+    schema = _PATTERN_SCHEMAS.get(key)
+    if schema is None or value is None:
+        return value
+    if isinstance(value, str):
+        import json
+        try:
+            value = json.loads(value)
+        except json.JSONDecodeError:
+            return value
+    try:
+        return schema(**value).model_dump()
+    except (ValidationError, TypeError):
+        return value
 
 
 class DrawingPattern(Base):
@@ -128,7 +171,7 @@ class DrawingPattern(Base):
             if key in d:
                 setattr(self, key, d[key])
 
-        # JSON 字段：接受 dict 或 JSON 字符串
+        # JSON 字段：接受 dict 或 JSON 字符串，写入前校验
         for key in (
             "topology", "devices", "layout_rules",
             "annotation_style", "connection_patterns", "layer_spec",
@@ -137,7 +180,8 @@ class DrawingPattern(Base):
         ):
             if key in d and d[key] is not None:
                 val = d[key]
-                if isinstance(val, (dict, list)):
-                    setattr(self, key, json.dumps(val, ensure_ascii=False))
+                validated = _validate_pattern_field(key, val)
+                if isinstance(validated, (dict, list)):
+                    setattr(self, key, json.dumps(validated, ensure_ascii=False))
                 elif isinstance(val, str):
                     setattr(self, key, val)

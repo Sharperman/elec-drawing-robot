@@ -65,7 +65,7 @@ class DrawAgent:
             max_tokens=settings.LLM_MAX_TOKENS,
         )
 
-        # 工具集（6 个工具，QueryCanvas 为新增）
+        # 工具集（6 个 CAD 工具 + 可选 Hermes 桌面工具）
         tools = [
             InsertElementTool(canvas_state=self.canvas_state),
             DrawConnectionTool(canvas_state=self.canvas_state),
@@ -74,6 +74,16 @@ class DrawAgent:
             QueryDrawingTool(),
             QueryCanvasTool(canvas_state=self.canvas_state),
         ]
+
+        # Computer Use 开启时注入 Hermes 桌面操作工具
+        try:
+            from hermes import hermes_state, get_hermes_tools
+            if hermes_state.enabled:
+                hermes_tools = get_hermes_tools()
+                tools.extend(hermes_tools)
+                logger.info(f"Hermes tools injected: {[t.name for t in hermes_tools]}")
+        except Exception:
+            pass
 
         # 系统提示词（含规范上下文 + AutoCAD 连接状态）
         system_prompt = build_system_prompt(
@@ -219,6 +229,14 @@ class DrawAgent:
             QueryDrawingTool(),
             QueryCanvasTool(canvas_state=self.canvas_state),
         ]
+
+        # Computer Use 开启时注入 Hermes 桌面操作工具
+        try:
+            from hermes import hermes_state, get_hermes_tools
+            if hermes_state.enabled:
+                tools.extend(get_hermes_tools())
+        except Exception:
+            pass
 
         agent = create_openai_tools_agent(llm=llm, tools=tools, prompt=prompt)
         executor = AgentExecutor(

@@ -1,0 +1,59 @@
+# Skill: 绘制三极断路器
+# agentskills.io 兼容格式
+api_version: "1.0"
+
+metadata:
+  name: "draw_3p_breaker"
+  description: "在 AutoCAD 中绘制标准三极断路器（QF）符号，含标注"
+  author: "elec-drawing-robot"
+  version: "1.0.0"
+  tags: ["electrical", "breaker", "autocad"]
+
+triggers:
+  - pattern: "三极断路器"
+    confidence: 0.95
+  - pattern: "画.*断路器"
+    confidence: 0.85
+  - pattern: "draw.*breaker"
+    confidence: 0.80
+  - slash: "/draw_breaker"
+
+inputs:
+  properties:
+    label:
+      type: string
+      description: "断路器标注名称，如 QF01"
+      default: "QF01"
+    x:
+      type: number
+      description: "插入点 X 坐标"
+      default: 100
+    y:
+      type: number
+      description: "插入点 Y 坐标"
+      default: 100
+  required: ["label"]
+
+execution:
+  type: python
+  steps:
+    - tool: insert_element
+      params:
+        symbol_id: "breaker_3p"
+        x: "${inputs.x}"
+        y: "${inputs.y}"
+      description: "插入三极断路器符号"
+      timeout_ms: 15000
+
+    - tool: add_annotation
+      params:
+        text: "${inputs.label}"
+        target_element: "last_inserted"
+        position: "right"
+      description: "添加标注 QF01"
+      timeout_ms: 10000
+
+    - tool: query_canvas
+      params: {}
+      description: "查询画布状态确认结果"
+      timeout_ms: 5000

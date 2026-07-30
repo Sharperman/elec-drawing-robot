@@ -26,10 +26,19 @@ env/
 
 # ===== 数据库 & 向量库 =====
 *.db
+*.db-wal
+*.db-shm
+*.db-journal
 *.sqlite
+*.sqlite-wal
+*.sqlite-shm
 *.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
 backend/data/chroma/
 backend/data/db/
+data/chroma/
+data/db/
 
 # ===== 模型文件（体积大，用 Git LFS 或独立管理）=====
 backend/recognition/models/*.pt
