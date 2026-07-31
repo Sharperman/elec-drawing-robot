@@ -34,8 +34,8 @@ numpy>=1.26.0
 # YOLOv8
 ultralytics>=8.2.0
 
-# AutoCAD COM (Windows)
-pywin32>=306
+# AutoCAD COM (Windows only - skip on Linux CI runners)
+pywin32>=306; sys_platform == 'win32'
 
 # 日志
 loguru>=0.7.2
