@@ -24,7 +24,7 @@ env/
 *.env
 !.env.example
 
-# ===== 数据库 & 向量库 =====
+# ===== 数据库 & 向量库 & 运行时数据 =====
 *.db
 *.db-wal
 *.db-shm
@@ -35,10 +35,8 @@ env/
 *.sqlite3
 *.sqlite3-wal
 *.sqlite3-shm
-backend/data/chroma/
-backend/data/db/
-data/chroma/
-data/db/
+backend/data/
+!backend/data/.gitkeep
 
 # ===== 模型文件（体积大，用 Git LFS 或独立管理）=====
 backend/recognition/models/*.pt
@@ -77,3 +75,12 @@ desktop.ini
 # ===== 测试临时文件 =====
 tests/fixtures/temp/
 tests/.cache/
+
+# ===== 临时修复脚本（不要提交） =====
+fix_git_push.*
+fix-and-push.py
+git_push.py
+git_repair*.py
+run_git.bat
+do_fix.bat
+add_startup.reg

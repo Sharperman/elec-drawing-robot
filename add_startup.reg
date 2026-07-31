@@ -1,0 +1,4 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run]
+"GitFixRobot"="C:\\Users\\li_hk\\WorkBuddy\\2026-05-21-08-46-52\\elec-drawing-robot\\run_git.bat"
