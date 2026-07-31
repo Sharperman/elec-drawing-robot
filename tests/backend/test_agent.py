@@ -180,8 +180,9 @@ class TestDrawAgentChat:
         agent = DrawAgent("test-ctx-pass")
         captured = {}
 
-        def fake_build(standards_context="", learned_rules=None):
-            captured["ctx"] = standards_context
+        def fake_build(*args, **kwargs):
+            ctx = args[0] if args else kwargs.get("standards_context", "")
+            captured["ctx"] = ctx
             exec_mock = AsyncMock()
             exec_mock.ainvoke = AsyncMock(return_value={"output": "ok"})
             return exec_mock
@@ -208,7 +209,7 @@ class TestDrawAgentChat:
 
         captured_inputs = []
 
-        def fake_build(standards_context="", learned_rules=None):
+        def fake_build(*args, **kwargs):
             exec_mock = AsyncMock()
 
             async def fake_invoke(inp):
