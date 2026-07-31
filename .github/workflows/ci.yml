@@ -180,7 +180,8 @@ jobs:
           HOST: "127.0.0.1"
           PORT: "8765"
         run: |
-          python -m uvicorn backend.main:app --host 127.0.0.1 --port 8765 &
+          cd backend
+          python -m uvicorn main:app --host 127.0.0.1 --port 8765 &
           BACKEND_PID=$!
 
           # Wait for backend to be ready (max 30s)

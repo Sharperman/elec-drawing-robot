@@ -44,4 +44,6 @@ EXPOSE 8765
 # The container serves the API and knowledge base; CAD operations are proxied
 # to a Windows host with AutoCAD installed.
 
-CMD ["python", "-m", "uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8765"]
+WORKDIR /app/backend
+
+CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8765"]
