@@ -18,7 +18,6 @@ AI 驱动的电气图纸自动绘制系统，通过自然语言对话指令控�
 | Node.js | ≥ 20 LTS |
 | AutoCAD | 2020 ~ 2025（需安装并注册 COM） |
 | Windows | 10/11 64-bit（pywin32 依赖） |
-| CUDA（可选）| ≥ 11.8（YOLOv8 GPU 加速） |
 
 ## 目录结构
 
