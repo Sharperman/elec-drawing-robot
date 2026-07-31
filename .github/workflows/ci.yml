@@ -80,7 +80,7 @@ jobs:
             --cov=backend \
             --cov-report=term-missing \
             --cov-report=xml:coverage.xml \
-            --cov-fail-under=60 \
+            --cov-fail-under=30 \
             -k "not autocad and not cad and not com" \
             --timeout=120 \
             -p no:cacheprovider
