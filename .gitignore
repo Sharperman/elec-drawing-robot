@@ -84,3 +84,7 @@ git_repair*.py
 run_git.bat
 do_fix.bat
 add_startup.reg
+ci_log.html
+ci_log.zip
+test_write.txt
+*.bak
