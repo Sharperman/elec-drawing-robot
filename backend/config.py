@@ -133,6 +133,8 @@ settings = Settings()
 
 # 确保数据目录存在
 for _dir in [settings.DB_PATH, settings.CHROMA_PATH, settings.LOG_DIR, settings.UPLOAD_DIR, settings.LEARN_THUMB_DIR]:
+    if _dir == ":memory:":
+        continue  # 内存数据库无目录可建
     p = Path(_dir)
     if "." in p.name:
         p = p.parent  # 文件路径取其父目录

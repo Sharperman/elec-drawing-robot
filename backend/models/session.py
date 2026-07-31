@@ -12,6 +12,8 @@ from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 def _get_db_url() -> str:
     """延迟获取数据库 URL（避免循环导入）"""
     from config import settings
+    if settings.DB_PATH == ":memory:":
+        return "sqlite:///:memory:"
     db_path = Path(settings.DB_PATH)
     db_path.parent.mkdir(parents=True, exist_ok=True)
     return f"sqlite:///{db_path}"
@@ -24,18 +26,30 @@ class Base(DeclarativeBase):
 
 def _create_engine():
     """创建 SQLAlchemy Engine"""
+    from config import settings
     db_url = _get_db_url()
-    engine = create_engine(
-        db_url,
-        echo=False,
-        connect_args={
-            "check_same_thread": False,  # SQLite 多线程支持
-            "timeout": 30,
-        },
-        pool_size=5,
-        max_overflow=10,
-        pool_pre_ping=True,
-    )
+    if settings.DB_PATH == ":memory:":
+        # 内存数据库使用默认 SingletonThreadPool，不支持 pool_size/max_overflow
+        engine = create_engine(
+            db_url,
+            echo=False,
+            connect_args={
+                "check_same_thread": False,
+                "timeout": 30,
+            },
+        )
+    else:
+        engine = create_engine(
+            db_url,
+            echo=False,
+            connect_args={
+                "check_same_thread": False,  # SQLite 多线程支持
+                "timeout": 30,
+            },
+            pool_size=5,
+            max_overflow=10,
+            pool_pre_ping=True,
+        )
 
     # 启用 WAL 模式（提升 SQLite 并发性能）
     @event.listens_for(engine, "connect")

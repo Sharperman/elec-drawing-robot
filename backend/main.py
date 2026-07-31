@@ -84,23 +84,26 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         from datetime import date as _date
         from datetime import timedelta as _td
         import shutil
-        db_path = Path(settings.DB_PATH)
-        backup_dir = db_path.parent / "backups"
-        backup_dir.mkdir(parents=True, exist_ok=True)
-        today_backup = backup_dir / f"elec_robot.{_date.today().isoformat()}.bak"
-        if not today_backup.exists():
-            shutil.copy2(db_path, today_backup)
-            logger.info(f"Daily backup created: {today_backup}")
-            # 清理 7 天前的备份
-            cutoff = _date.today() - _td(days=7)
-            for old in backup_dir.glob("elec_robot.*.bak"):
-                try:
-                    old_date = _date.fromisoformat(old.stem.split(".", 1)[1])
-                    if old_date < cutoff:
-                        old.unlink()
-                        logger.info(f"Removed old backup: {old.name}")
-                except (ValueError, IndexError):
-                    pass
+        if settings.DB_PATH == ":memory:" or not Path(settings.DB_PATH).exists():
+            logger.info("In-memory DB - skipping daily backup")
+        else:
+            db_path = Path(settings.DB_PATH)
+            backup_dir = db_path.parent / "backups"
+            backup_dir.mkdir(parents=True, exist_ok=True)
+            today_backup = backup_dir / f"elec_robot.{_date.today().isoformat()}.bak"
+            if not today_backup.exists():
+                shutil.copy2(db_path, today_backup)
+                logger.info(f"Daily backup created: {today_backup}")
+                # 清理 7 天前的备份
+                cutoff = _date.today() - _td(days=7)
+                for old in backup_dir.glob("elec_robot.*.bak"):
+                    try:
+                        old_date = _date.fromisoformat(old.stem.split(".", 1)[1])
+                        if old_date < cutoff:
+                            old.unlink()
+                            logger.info(f"Removed old backup: {old.name}")
+                    except (ValueError, IndexError):
+                        pass
     except Exception as e:
         logger.warning(f"Database backup failed (non-fatal): {e}")
 
