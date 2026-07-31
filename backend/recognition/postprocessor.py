@@ -1,7 +1,6 @@
 """
 推理后处理：NMS 去重、置信度过滤、bbox 还原、symbol 映射
 """
-from typing import Optional
 
 import numpy as np
 

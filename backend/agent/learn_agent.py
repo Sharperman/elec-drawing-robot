@@ -7,30 +7,27 @@ LearnAgent - 参考图纸学习 Agent
 3. 交互式对话（不懂的裁剪截图问用户，用户回复）
 4. 提取 DrawingPattern 存入数据库
 """
-import json
-import os
-import uuid
 import base64
-import re
-import asyncio
+from collections.abc import Generator
 from datetime import datetime
+import json
 from pathlib import Path
-from typing import Optional, Generator, AsyncGenerator, Dict, List
+import re
+import uuid
 
-from langchain_core.messages import (
-    HumanMessage, SystemMessage, AIMessage,
-)
-from loguru import logger
-
-from autocad.connection import autocad_connection
-from autocad.zoom_control import ZoomController, get_zoom_controller
+from agent.llm_factory import create_primary_llm, create_vision_llm
 from autocad.canvas_state import CanvasState
+from autocad.connection import autocad_connection
 from autocad.dxf_text_extractor import dxf_text_extractor
 from autocad.snapshot import autocad_snapshot
-from agent.llm_factory import create_primary_llm, create_vision_llm
+from autocad.zoom_control import get_zoom_controller
+from langchain_core.messages import (
+    HumanMessage,
+    SystemMessage,
+)
+from loguru import logger
 from models.drawing_pattern import DrawingPattern
-from models.session import get_db, get_engine, get_session_local
-
+from models.session import get_engine, get_session_local
 
 # ── 学习系统 Prompt ────────────────────────────────
 
@@ -222,9 +219,9 @@ class LearnAgent:
         self.zoom_ctrl = get_zoom_controller()
         self.canvas_state = CanvasState(session_id, f"learn_{session_id}")
         self._screenshots: list[dict] = []       # 截图历史
-        self._pattern: Optional[dict] = None       # 正在构建的 pattern
+        self._pattern: dict | None = None       # 正在构建的 pattern
         self._user_feedback: list[str] = []       # 用户补充信息
-        self._current_file: Optional[str] = None   # 当前学习文件
+        self._current_file: str | None = None   # 当前学习文件
         self._llm_executor = None                  # 外部注入的线程池（用于 LLM 异步调用）
 
     # ── 公开方法 ────────────────────────────────────────
@@ -449,8 +446,8 @@ class LearnAgent:
 
     def confirm_and_save(
         self,
-        pattern_overrides: Optional[dict] = None,
-        user_notes: Optional[str] = None,
+        pattern_overrides: dict | None = None,
+        user_notes: str | None = None,
     ) -> dict:
         """
         确认并保存 Pattern 到数据库
@@ -529,7 +526,7 @@ class LearnAgent:
 
     # ── 内部方法 ────────────────────────────────────────
 
-    def _extract_pdf_pages(self, file_path: str, dpi: int = 200, max_pages: int = 5) -> List[str]:
+    def _extract_pdf_pages(self, file_path: str, dpi: int = 200, max_pages: int = 5) -> list[str]:
         """
         用 PyMuPDF 提取 PDF 页面为 base64 PNG 图像列表
 
@@ -542,11 +539,10 @@ class LearnAgent:
             每页图像的 base64 字符串列表
         """
         try:
-            import fitz  # PyMuPDF
-            import io
-            from PIL import Image
 
-            pages_b64: List[str] = []
+            import fitz  # PyMuPDF
+
+            pages_b64: list[str] = []
             doc = fitz.open(file_path)
             total = len(doc)
             page_count = min(total, max_pages)
@@ -606,7 +602,7 @@ class LearnAgent:
             logger.error(f"打开图纸失败: {e}")
             return False
 
-    def _capture_screenshot(self) -> Optional[str]:
+    def _capture_screenshot(self) -> str | None:
         """截图并返回 base64 字符串"""
         try:
             b64 = autocad_snapshot.capture(upscale=True)
@@ -690,7 +686,7 @@ class LearnAgent:
             logger.warning(f"AutoCAD COM 文本提取失败: {e}")
             return ""
 
-    def _generate_pattern(self, dxf_text: str) -> Optional[dict]:
+    def _generate_pattern(self, dxf_text: str) -> dict | None:
         """汇总所有截图分析和 ezdxf 文本，生成 DrawingPattern"""
         try:
             import json
@@ -842,7 +838,7 @@ class LearnAgent:
         # ── 布局规律 ──
         rules = pattern.get("layout_rules", [])
         if rules:
-            lines.append(f"\n**布局规律**：")
+            lines.append("\n**布局规律**：")
             for r in rules[:8]:
                 lines.append(f"  - {r}")
 

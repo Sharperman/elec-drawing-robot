@@ -4,13 +4,12 @@ Skill 核心数据模型
 """
 from __future__ import annotations
 
-import json
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+import json
+from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
-
 
 # ─── 枚举 ─────────────────────────────────────────────────
 
@@ -32,7 +31,7 @@ class SkillStatus(str, Enum):
 
 class SkillTrigger(BaseModel):
     """Skill 触发条件"""
-    patterns: List[str] = Field(
+    patterns: list[str] = Field(
         default_factory=list,
         description="触发词列表，如 ['画三极断路器', '3P breaker']"
     )
@@ -44,7 +43,7 @@ class SkillTrigger(BaseModel):
 
     @field_validator("patterns")
     @classmethod
-    def validate_patterns(cls, v: List[str]) -> List[str]:
+    def validate_patterns(cls, v: list[str]) -> list[str]:
         if not v:
             return v
         cleaned = [p.strip() for p in v if p.strip()]
@@ -57,16 +56,16 @@ class SkillInputProperty(BaseModel):
     """Skill 输入参数属性"""
     type: str = Field(default="string", description="参数类型")
     description: str = Field(default="", description="参数描述")
-    default: Optional[Any] = Field(default=None, description="默认值")
+    default: Any | None = Field(default=None, description="默认值")
 
 
 class SkillInputSchema(BaseModel):
     """Skill 输入参数 Schema"""
-    properties: Dict[str, SkillInputProperty] = Field(
+    properties: dict[str, SkillInputProperty] = Field(
         default_factory=dict,
         description="输入参数属性定义"
     )
-    required: List[str] = Field(
+    required: list[str] = Field(
         default_factory=list,
         description="必需参数列表"
     )
@@ -77,7 +76,7 @@ class SkillInputSchema(BaseModel):
 class SkillStep(BaseModel):
     """Skill 执行步骤"""
     tool: str = Field(..., description="工具名称，如 insert_element")
-    params: Dict[str, Any] = Field(
+    params: dict[str, Any] = Field(
         default_factory=dict,
         description="工具参数，支持 ${inputs.x} 模板语法"
     )
@@ -98,7 +97,7 @@ class SkillExecutionConfig(BaseModel):
     """Skill 执行配置"""
     type: str = Field(default="python", description="执行类型")
     entry: str = Field(default="execute.py", description="入口文件")
-    steps: List[SkillStep] = Field(
+    steps: list[SkillStep] = Field(
         default_factory=list,
         description="执行步骤列表"
     )
@@ -136,7 +135,7 @@ class HermesSkill(BaseModel):
         description="分类"
     )
     status: SkillStatus = Field(default=SkillStatus.ACTIVE, description="状态")
-    triggers: Optional[SkillTrigger] = Field(default=None, description="触发条件")
+    triggers: SkillTrigger | None = Field(default=None, description="触发条件")
     inputs: SkillInputSchema = Field(
         default_factory=SkillInputSchema,
         description="输入参数"
@@ -148,10 +147,10 @@ class HermesSkill(BaseModel):
     # 运行时统计
     use_count: int = Field(default=0, description="使用次数")
     success_count: int = Field(default=0, description="成功次数")
-    last_used_at: Optional[str] = Field(default=None, description="最后使用时间")
+    last_used_at: str | None = Field(default=None, description="最后使用时间")
 
     # 来源
-    source_path: Optional[str] = Field(default=None, description="YAML 文件路径")
+    source_path: str | None = Field(default=None, description="YAML 文件路径")
 
     @property
     def success_rate(self) -> float:
@@ -160,12 +159,12 @@ class HermesSkill(BaseModel):
             return 1.0
         return round(self.success_count / self.use_count, 4)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """转为 JSON 可序列化字典"""
         return json.loads(self.model_dump_json())
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> HermesSkill:
+    def from_dict(cls, data: dict[str, Any]) -> HermesSkill:
         """从字典创建"""
         return cls.model_validate(data)
 
@@ -182,7 +181,7 @@ class SkillMatch(BaseModel):
 class ExecutionResult(BaseModel):
     """Skill 执行结果"""
     success: bool
-    outputs: List[Dict[str, Any]] = Field(default_factory=list)
-    logs: List[str] = Field(default_factory=list)
+    outputs: list[dict[str, Any]] = Field(default_factory=list)
+    logs: list[str] = Field(default_factory=list)
     execution_time_ms: int = Field(default=0)
-    error_message: Optional[str] = Field(default=None)
+    error_message: str | None = Field(default=None)

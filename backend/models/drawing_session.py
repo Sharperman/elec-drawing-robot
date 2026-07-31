@@ -2,9 +2,8 @@
 绘图会话和对话消息 ORM 模型
 """
 from datetime import datetime
-from typing import Optional
 
-from sqlalchemy import String, Text, DateTime, ForeignKey, Integer, Boolean, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from models.session import Base
@@ -23,15 +22,15 @@ class DrawingSession(Base):
         String(200), nullable=False, default="新建会话",
         comment="会话标题（用于侧边栏展示）"
     )
-    drawing_file: Mapped[Optional[str]] = mapped_column(
+    drawing_file: Mapped[str | None] = mapped_column(
         String(500), nullable=True,
         comment="关联的 AutoCAD 图纸文件路径"
     )
-    drawing_name: Mapped[Optional[str]] = mapped_column(
+    drawing_name: Mapped[str | None] = mapped_column(
         String(200), nullable=True,
         comment="图纸名称"
     )
-    standard_id: Mapped[Optional[int]] = mapped_column(
+    standard_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("drawing_standards.id"), nullable=True,
         comment="当前使用的绘图规范 ID"
     )
@@ -76,11 +75,11 @@ class ChatMessage(Base):
         Text, nullable=False,
         comment="消息内容（Markdown 格式）"
     )
-    tool_calls: Mapped[Optional[str]] = mapped_column(
+    tool_calls: Mapped[str | None] = mapped_column(
         Text, nullable=True,
         comment="Agent 工具调用记录（JSON 字符串）"
     )
-    image_data: Mapped[Optional[str]] = mapped_column(
+    image_data: Mapped[str | None] = mapped_column(
         Text, nullable=True,
         comment="附带图片的 base64 数据"
     )
@@ -88,7 +87,7 @@ class ChatMessage(Base):
         Boolean, nullable=False, default=False,
         comment="是否为流式输出中"
     )
-    token_count: Mapped[Optional[int]] = mapped_column(
+    token_count: Mapped[int | None] = mapped_column(
         Integer, nullable=True,
         comment="消息 token 数（用于统计）"
     )

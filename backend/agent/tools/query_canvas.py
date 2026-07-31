@@ -2,12 +2,9 @@
 QueryCanvas Tool
 查询画布状态记忆（CanvasState），让 LLM 了解当前图纸上有什么
 """
-from typing import Optional, Type
 
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
-
-from loguru import logger
 
 
 class QueryCanvasInput(BaseModel):
@@ -23,15 +20,15 @@ class QueryCanvasInput(BaseModel):
             "- device_detail: 查询特定设备的详细信息（需指定 filter_label）"
         ),
     )
-    filter_label: Optional[str] = Field(
+    filter_label: str | None = Field(
         None,
         description="按设备编号过滤，如 'T1'、'QF1'。支持模糊匹配。用于 query_type='devices' 或 'device_detail'",
     )
-    filter_type: Optional[str] = Field(
+    filter_type: str | None = Field(
         None,
         description="按设备类型过滤，如 'TR_2W'、'CB_3P'。用于 query_type='devices'",
     )
-    filter_layer: Optional[str] = Field(
+    filter_layer: str | None = Field(
         None,
         description="按图层过滤，如 'ELEC-POWER'。用于 query_type='devices'",
     )
@@ -66,7 +63,7 @@ class QueryCanvasTool(BaseTool):
         "- query_type='device_detail': 查询指定 label 的设备详情\n"
         "- query_type='connections': 返回所有连线关系"
     )
-    args_schema: Type[BaseModel] = QueryCanvasInput
+    args_schema: type[BaseModel] = QueryCanvasInput
 
     # ── canvas_state 由 DrawAgent 在构建时注入 ──
     # 使用 ClassVar 避免被 Pydantic 序列化
@@ -75,9 +72,9 @@ class QueryCanvasTool(BaseTool):
     def _run(
         self,
         query_type: str = "summary",
-        filter_label: Optional[str] = None,
-        filter_type: Optional[str] = None,
-        filter_layer: Optional[str] = None,
+        filter_label: str | None = None,
+        filter_type: str | None = None,
+        filter_layer: str | None = None,
     ) -> str:
         """执行画布状态查询"""
         if self.canvas_state is None:
@@ -165,7 +162,7 @@ class QueryCanvasTool(BaseTool):
                 # 相关标注
                 anns = [a for a in cs.annotations if a.target_handle == d.handle]
                 if anns:
-                    lines.append(f"- 标注:")
+                    lines.append("- 标注:")
                     for a in anns:
                         lines.append(f"  \"{a.text}\" @ ({a.x:.0f},{a.y:.0f})")
 

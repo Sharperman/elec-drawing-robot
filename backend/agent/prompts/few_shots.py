@@ -2,7 +2,6 @@
 Few-Shot 示例
 自然语言指令 → Tool 调用链示例，用于引导 LLM 正确使用工具
 """
-from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
 # ============================================================
 # Few-Shot 示例集（自然语言 → 工具调用链）

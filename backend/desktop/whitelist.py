@@ -2,7 +2,6 @@
 白名单管理器
 管理哪些应用可以被 Computer Use Agent 自动控制。
 """
-from typing import List, Optional
 
 
 class Whitelist:
@@ -22,7 +21,7 @@ class Whitelist:
     ]
 
     def __init__(self):
-        self._custom: List[str] = []
+        self._custom: list[str] = []
 
     def is_allowed(self, app_title: str) -> bool:
         """
@@ -35,7 +34,7 @@ class Whitelist:
                 return True
         return False
 
-    def find_matching(self, app_title: str) -> Optional[str]:
+    def find_matching(self, app_title: str) -> str | None:
         """找到匹配的白名单条目"""
         all_list = self.DEFAULT_WHITELIST + self._custom
         for name in all_list:
@@ -53,6 +52,6 @@ class Whitelist:
         if app_name in self._custom:
             self._custom.remove(app_name)
 
-    def get_list(self) -> List[str]:
+    def get_list(self) -> list[str]:
         """获取完整白名单"""
         return self.DEFAULT_WHITELIST + self._custom

@@ -2,9 +2,8 @@
 用户反馈和学习规则 ORM 模型
 """
 from datetime import datetime
-from typing import Optional
 
-from sqlalchemy import String, Text, DateTime, Boolean, Integer, Float, func
+from sqlalchemy import Boolean, DateTime, Float, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from models.session import Base
@@ -19,7 +18,7 @@ class UserFeedback(Base):
         String(64), nullable=False, index=True,
         comment="来源会话 ID"
     )
-    message_id: Mapped[Optional[int]] = mapped_column(
+    message_id: Mapped[int | None] = mapped_column(
         Integer, nullable=True,
         comment="关联的消息 ID"
     )
@@ -39,11 +38,11 @@ class UserFeedback(Base):
         Text, nullable=False, default="",
         comment="用户反馈说明"
     )
-    correction: Mapped[Optional[str]] = mapped_column(
+    correction: Mapped[str | None] = mapped_column(
         Text, nullable=True,
         comment="用户提供的正确做法（纠错类反馈）"
     )
-    rating: Mapped[Optional[int]] = mapped_column(
+    rating: Mapped[int | None] = mapped_column(
         Integer, nullable=True,
         comment="满意度评分（1-5）"
     )

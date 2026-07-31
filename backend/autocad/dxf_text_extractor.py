@@ -10,10 +10,9 @@ DXF 结构化文本提取器
 - 线条/多段线提取为简化的连接描述
 """
 
+from dataclasses import dataclass
 import os
 import tempfile
-from typing import Optional
-from dataclasses import dataclass, field
 
 from loguru import logger
 
@@ -60,7 +59,7 @@ class DXFTextExtractor:
         "下部区域":            (0.00, 0.00, 1.00, 0.35),
     }
 
-    def extract(self, output_dir: Optional[str] = None) -> str:
+    def extract(self, output_dir: str | None = None) -> str:
         """
         从当前 AutoCAD 图纸提取结构化文本
 
@@ -434,7 +433,7 @@ class DXFTextExtractor:
         grid_size: float,
         all_texts: list[TextEntity],
         search_radius: float = 50,
-    ) -> Optional[str]:
+    ) -> str | None:
         """找给定坐标最近的文字"""
         gx = int((x - x_min) / grid_size)
         gy = int((y - y_min) / grid_size)
@@ -460,12 +459,12 @@ class DXFTextExtractor:
     # AutoCAD COM 交互
     # ──────────────────────────────────────────────
 
-    def _saveas_dxf(self, output_dir: Optional[str] = None) -> str:
+    def _saveas_dxf(self, output_dir: str | None = None) -> str:
         """通过 AutoCAD COM SaveAs 导出 DXF"""
         import pythoncom
         pythoncom.CoInitialize()
-        import win32com.client
         from config import settings
+        import win32com.client
 
         acad = win32com.client.GetActiveObject(settings.AUTOCAD_VERSION)
         doc = acad.ActiveDocument

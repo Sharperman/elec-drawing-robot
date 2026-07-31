@@ -4,22 +4,17 @@ Skill Registry — Skill 注册表
 """
 from __future__ import annotations
 
-import re
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any
 
 from loguru import logger
 
 from hermes.models.skill import (
     HermesSkill,
     SkillCategory,
-    SkillStatus,
     SkillMatch,
-    SkillStep,
-    SkillExecutionConfig,
-    SkillTrigger,
-    SkillInputSchema,
-    SkillInputProperty,
+    SkillStatus,
 )
 from hermes.parsers.yaml_loader import YAMLLoader
 
@@ -36,21 +31,21 @@ class SkillRegistry:
 
     def __init__(self, skills_dir: str):
         self._skills_dir = Path(skills_dir)
-        self._internal: Dict[str, HermesSkill] = {}
-        self._external: Dict[str, HermesSkill] = {}
-        self._autogen: Dict[str, HermesSkill] = {}
+        self._internal: dict[str, HermesSkill] = {}
+        self._external: dict[str, HermesSkill] = {}
+        self._autogen: dict[str, HermesSkill] = {}
 
         self._yaml_loader = YAMLLoader(str(self._skills_dir))
 
         # 运行时执行映射：skill_id → callable
-        self._executors: Dict[str, Callable] = {}
+        self._executors: dict[str, Callable] = {}
 
     # ─── 注册 ────────────────────────────────────────────
 
     def register_internal(
         self,
         skill: HermesSkill,
-        executor: Optional[Callable] = None,
+        executor: Callable | None = None,
     ) -> None:
         """注册内置 Skill（截图、点击等）"""
         skill.category = SkillCategory.INTERNAL
@@ -99,7 +94,7 @@ class SkillRegistry:
         logger.info(f"已加载 {count} 个外部 Skill")
         return count
 
-    def load_autogen_skills(self, skills: List[HermesSkill]) -> int:
+    def load_autogen_skills(self, skills: list[HermesSkill]) -> int:
         """批量注册自动生成的 Skill"""
         count = 0
         for skill in skills:
@@ -110,7 +105,7 @@ class SkillRegistry:
 
     # ─── 查询 ────────────────────────────────────────────
 
-    def get(self, skill_id: str) -> Optional[HermesSkill]:
+    def get(self, skill_id: str) -> HermesSkill | None:
         """按 ID 获取 Skill"""
         for registry in [self._internal, self._external, self._autogen]:
             if skill_id in registry:
@@ -119,7 +114,7 @@ class SkillRegistry:
 
     def get_by_category(
         self, category: SkillCategory
-    ) -> List[HermesSkill]:
+    ) -> list[HermesSkill]:
         """按分类获取"""
         if category == SkillCategory.INTERNAL:
             return list(self._internal.values())
@@ -129,9 +124,9 @@ class SkillRegistry:
             return list(self._autogen.values())
         return []
 
-    def get_all(self, include_disabled: bool = False) -> List[HermesSkill]:
+    def get_all(self, include_disabled: bool = False) -> list[HermesSkill]:
         """获取所有可用 Skill"""
-        skills: List[HermesSkill] = []
+        skills: list[HermesSkill] = []
         for registry in [self._internal, self._external, self._autogen]:
             for skill in registry.values():
                 if include_disabled or skill.status == SkillStatus.ACTIVE:
@@ -140,7 +135,7 @@ class SkillRegistry:
         skills.sort(key=lambda s: (s.category.value, s.skill_id))
         return skills
 
-    def count(self) -> Dict[str, int]:
+    def count(self) -> dict[str, int]:
         """分类统计"""
         return {
             "internal": len(self._internal),
@@ -150,19 +145,19 @@ class SkillRegistry:
                       + len(self._autogen)),
         }
 
-    def get_executor(self, skill_id: str) -> Optional[Callable]:
+    def get_executor(self, skill_id: str) -> Callable | None:
         """获取 Skill 的执行函数"""
         return self._executors.get(skill_id)
 
     # ─── 匹配 ────────────────────────────────────────────
 
-    def find_matching(self, query: str, top_k: int = 5) -> List[SkillMatch]:
+    def find_matching(self, query: str, top_k: int = 5) -> list[SkillMatch]:
         """根据用户输入匹配最适合的 Skill"""
         query = query.strip().lower()
         if not query:
             return []
 
-        matches: List[SkillMatch] = []
+        matches: list[SkillMatch] = []
         all_skills = self.get_all()
 
         for skill in all_skills:
@@ -215,7 +210,7 @@ class SkillRegistry:
 
     # ─── 工具映射 ────────────────────────────────────────
 
-    def to_langchain_tools(self) -> List[Any]:
+    def to_langchain_tools(self) -> list[Any]:
         """将 Hermes Skill 转为 LangChain Tool（供 DrawAgent 使用）"""
         from langchain_core.tools import tool as lc_tool
 
@@ -256,7 +251,7 @@ class SkillRegistry:
 
         return tools
 
-    def to_slash_commands(self) -> Dict[str, Dict[str, Any]]:
+    def to_slash_commands(self) -> dict[str, dict[str, Any]]:
         """生成斜杠命令配置"""
         commands = {}
         for skill in self.get_all():

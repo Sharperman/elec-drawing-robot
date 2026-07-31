@@ -3,12 +3,11 @@ YOLOv8 推理单例
 懒加载、预热线程、支持 ONNX 模式
 若模型文件不存在，降级到基于规则的简单识别
 """
-import threading
 from pathlib import Path
-from typing import Optional
+import threading
 
-import numpy as np
 from loguru import logger
+import numpy as np
 from PIL import Image
 
 

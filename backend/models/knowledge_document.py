@@ -3,12 +3,16 @@ KnowledgeDocument 数据模型
 存储用户上传的知识文档（设计手册、规程、策划文件等），
 与 OCR 后的分块结果关联，供 RAG 检索使用。
 """
-from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import (
-    Column, Integer, String, Text, Boolean,
-    DateTime, Float, Index,
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    Index,
+    Integer,
+    String,
+    Text,
 )
 from sqlalchemy.sql import func
 

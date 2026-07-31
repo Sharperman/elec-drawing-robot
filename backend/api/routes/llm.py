@@ -8,17 +8,15 @@ LLM Provider 管理路由
 /api/llm/providers/{id}/test    POST - 测试 Provider 连接
 /api/llm/env              POST   - 将当前激活配置同步到 .env
 """
-from typing import Optional
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
-from loguru import logger
-from sqlalchemy.orm import Session
-
 from api.schemas import ApiResponse
-from models.session import get_db
+from fastapi import APIRouter, Depends, HTTPException
+from loguru import logger
 from models.llm_provider import LLMProvider
+from models.session import get_db
+from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 
@@ -34,12 +32,12 @@ class ProviderCreate(BaseModel):
 
 
 class ProviderUpdate(BaseModel):
-    provider_name: Optional[str] = Field(None, max_length=100)
-    base_url: Optional[str] = Field(None, max_length=500)
-    api_key: Optional[str] = None
-    model: Optional[str] = Field(None, max_length=100)
-    temperature: Optional[float] = Field(None, ge=0.0, le=2.0)
-    is_active: Optional[bool] = None
+    provider_name: str | None = Field(None, max_length=100)
+    base_url: str | None = Field(None, max_length=500)
+    api_key: str | None = None
+    model: str | None = Field(None, max_length=100)
+    temperature: float | None = Field(None, ge=0.0, le=2.0)
+    is_active: bool | None = None
 
 
 class ActivateRequest(BaseModel):
@@ -314,7 +312,7 @@ def _sync_to_env(db: Session) -> dict:
 
     # 读取当前 .env
     try:
-        with open(env_path, "r", encoding="utf-8") as f:
+        with open(env_path, encoding="utf-8") as f:
             lines = f.readlines()
     except FileNotFoundError:
         lines = []

@@ -5,10 +5,9 @@ POST /api/autocad/connect - 连接 AutoCAD
 POST /api/autocad/disconnect - 断开连接
 GET  /api/autocad/snapshot - 获取截图
 """
+from api.schemas import ApiResponse, AutoCADConnectRequest, AutoCADStatusResponse
 from fastapi import APIRouter
 from loguru import logger
-
-from api.schemas import ApiResponse, AutoCADStatusResponse, AutoCADConnectRequest
 from utils.error_codes import ErrorCode, get_error_message
 
 router = APIRouter()

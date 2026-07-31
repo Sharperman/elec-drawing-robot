@@ -4,11 +4,11 @@ Tests for:
   - recognition/detector.py - YOLODetector predict(), _rule_based_detect(),
                               _shape_classify(), _cls_to_symbol_id(), _cls_to_name()
 """
-import numpy as np
-import pytest
-from unittest.mock import MagicMock, patch, PropertyMock
-from PIL import Image
+from unittest.mock import MagicMock, patch
 
+import numpy as np
+from PIL import Image
+import pytest
 
 # ============================================================
 # Helpers

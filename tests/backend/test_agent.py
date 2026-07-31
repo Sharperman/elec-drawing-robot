@@ -4,10 +4,9 @@ Tests for:
   - agent/draw_agent.py  - DrawAgent.chat(), chat_stream(), get_agent(), _fallback_response()
   - agent/prompts/system_prompt.py - build_system_prompt()
 """
-import sys
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
+import pytest
 
 # ============================================================
 # Ensure langchain_classic provides AgentExecutor
@@ -90,14 +89,14 @@ class TestGetAgent:
     """Tests for get_agent() session registry."""
 
     def test_returns_draw_agent_instance(self):
-        from agent.draw_agent import get_agent, DrawAgent, _agent_registry
+        from agent.draw_agent import DrawAgent, _agent_registry, get_agent
 
         _agent_registry.clear()
         agent = get_agent("session-001")
         assert isinstance(agent, DrawAgent)
 
     def test_same_session_id_returns_same_instance(self):
-        from agent.draw_agent import get_agent, _agent_registry
+        from agent.draw_agent import _agent_registry, get_agent
 
         _agent_registry.clear()
         a1 = get_agent("session-abc")
@@ -105,7 +104,7 @@ class TestGetAgent:
         assert a1 is a2
 
     def test_different_sessions_return_different_instances(self):
-        from agent.draw_agent import get_agent, _agent_registry
+        from agent.draw_agent import _agent_registry, get_agent
 
         _agent_registry.clear()
         a1 = get_agent("session-X")
@@ -113,7 +112,7 @@ class TestGetAgent:
         assert a1 is not a2
 
     def test_agent_has_correct_session_id(self):
-        from agent.draw_agent import get_agent, _agent_registry
+        from agent.draw_agent import _agent_registry, get_agent
 
         _agent_registry.clear()
         agent = get_agent("my-special-session")
@@ -199,7 +198,7 @@ class TestDrawAgentChat:
     async def test_chat_history_capped_at_20(self):
         """Only the last 20 messages are passed to the executor."""
         from agent.draw_agent import DrawAgent
-        from langchain_core.messages import HumanMessage, AIMessage
+        from langchain_core.messages import AIMessage, HumanMessage
 
         agent = DrawAgent("test-session-cap")
         # Pre-fill history with 22 messages (11 pairs)

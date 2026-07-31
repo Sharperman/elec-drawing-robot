@@ -2,7 +2,6 @@
 ChromaDB 向量数据库 — 全部使用 ChromaDB 本地默认模型 (all-MiniLM-L6-v2)
 不依赖外部 Embedding API
 """
-from typing import Optional
 
 import chromadb
 from chromadb.config import Settings as ChromaSettings
@@ -13,7 +12,7 @@ class VectorStore:
     """ChromaDB 向量数据库管理类（纯本地 embedding）"""
 
     def __init__(self) -> None:
-        self._client: Optional[chromadb.PersistentClient] = None
+        self._client: chromadb.PersistentClient | None = None
         self._initialized: bool = False
 
     async def initialize(self) -> None:
@@ -70,7 +69,7 @@ class VectorStore:
         collection_name: str,
         query: str,
         top_k: int = 5,
-        where: Optional[dict] = None,
+        where: dict | None = None,
     ) -> list[dict]:
         """
         语义相似性搜索（查询文本由 ChromaDB 自动向量化）

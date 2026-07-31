@@ -11,7 +11,7 @@ from loguru import logger
 class AutoCADConnection:
     """
     AutoCAD COM 连接管理器（单例）
-    
+
     通过 win32com.client 连接到运行中的 AutoCAD 进程，
     获取 Application、ActiveDocument 和 ModelSpace 对象。
     """
@@ -34,14 +34,14 @@ class AutoCADConnection:
         self._doc = None           # ActiveDocument
         self._model_space = None   # ModelSpace
         self._is_connected: bool = False
-        self._heartbeat_thread: Optional[threading.Thread] = None
+        self._heartbeat_thread: threading.Thread | None = None
         self._stop_heartbeat: threading.Event = threading.Event()
 
     # ============================================================
     # 连接管理
     # ============================================================
 
-    def connect(self, version: Optional[str] = None) -> bool:
+    def connect(self, version: str | None = None) -> bool:
         """
         连接到正在运行的 AutoCAD 进程
 
@@ -55,9 +55,8 @@ class AutoCADConnection:
         try:
             import pythoncom
             pythoncom.CoInitialize()
-            import win32com.client  # type: ignore
-
             from config import settings
+            import win32com.client  # type: ignore
             prog_id = version or settings.AUTOCAD_VERSION
 
             logger.info(f"Connecting to AutoCAD: {prog_id}")
@@ -99,7 +98,7 @@ class AutoCADConnection:
         self._model_space = None
         logger.info("AutoCAD disconnected")
 
-    def reconnect(self, version: Optional[str] = None) -> bool:
+    def reconnect(self, version: str | None = None) -> bool:
         """重新连接 AutoCAD"""
         logger.info("Attempting to reconnect AutoCAD...")
         self.disconnect()
@@ -185,7 +184,7 @@ class AutoCADConnection:
 
     def _heartbeat_loop(self) -> None:
         """心跳检测线程：定期检查 AutoCAD 连接状态
-        
+
         注意：心跳线程运行在独立线程中，必须重新 GetActiveObject 获取
         当前线程的 COM dispatch，不能使用 connect() 线程中的 self._acad，
         否则会违反 COM STA 规则导致 "未找到主键" 等错误。

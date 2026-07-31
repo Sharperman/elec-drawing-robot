@@ -2,24 +2,22 @@
 AddAnnotation Tool
 添加文字标注和尺寸标注
 """
-from typing import Optional, Type
 
 from langchain_core.tools import BaseTool
-from pydantic import BaseModel, Field
-
 from loguru import logger
+from pydantic import BaseModel, Field
 
 
 class AddAnnotationInput(BaseModel):
     """AddAnnotation 工具输入参数"""
-    handle: Optional[str] = Field(
+    handle: str | None = Field(
         None,
         description="目标图元 Handle（如提供，标注自动定位到图元旁边）"
     )
     label: str = Field(..., description="设备编号或标注文字，如 T1、QF1、10kV/0.4kV")
-    params: Optional[str] = Field(None, description="设备参数文字，如 1000kVA、630A")
-    x: Optional[float] = Field(None, description="标注 X 坐标（不提供 handle 时必填）")
-    y: Optional[float] = Field(None, description="标注 Y 坐标（不提供 handle 时必填）")
+    params: str | None = Field(None, description="设备参数文字，如 1000kVA、630A")
+    x: float | None = Field(None, description="标注 X 坐标（不提供 handle 时必填）")
+    y: float | None = Field(None, description="标注 Y 坐标（不提供 handle 时必填）")
     position: str = Field(
         default="bottom",
         description="标注位置相对图元：bottom/top/left/right"
@@ -50,7 +48,7 @@ class AddAnnotationTool(BaseTool):
         "可以通过图元 Handle 自动定位，也可以直接指定坐标。"
         "常用于添加设备编号（如 T1）和技术参数（如 10kV/0.4kV）。"
     )
-    args_schema: Type[BaseModel] = AddAnnotationInput
+    args_schema: type[BaseModel] = AddAnnotationInput
 
     # 位置偏移量（相对于图元插入点，mm）
     _POSITION_OFFSETS: dict[str, tuple[float, float]] = {
@@ -62,11 +60,11 @@ class AddAnnotationTool(BaseTool):
 
     def _run(
         self,
-        handle: Optional[str] = None,
+        handle: str | None = None,
         label: str = "",
-        params: Optional[str] = None,
-        x: Optional[float] = None,
-        y: Optional[float] = None,
+        params: str | None = None,
+        x: float | None = None,
+        y: float | None = None,
         position: str = "bottom",
         text_height: float = 3.5,
         annotation_type: str = "text",
@@ -76,9 +74,9 @@ class AddAnnotationTool(BaseTool):
         pythoncom.CoInitialize()
 
         try:
-            import win32com.client
-            from config import settings
             from autocad.annotation_ops import annotation_ops
+            from config import settings
+            import win32com.client
 
             # 在当前线程获取 COM dispatch（不用心跳线程的 doc）
             acad = win32com.client.GetActiveObject(settings.AUTOCAD_VERSION)

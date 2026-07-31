@@ -9,19 +9,16 @@ GET    /api/knowledge/search               — 语义搜索
 """
 import json
 import os
-import uuid
 from pathlib import Path
-from typing import Optional, List
+import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
-from loguru import logger
-from sqlalchemy.orm import Session
-from sqlalchemy import desc
-
-from models.session import get_db
-from models.knowledge_document import KnowledgeDocument
 from api.schemas import ApiResponse
-from config import settings
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from loguru import logger
+from models.knowledge_document import KnowledgeDocument
+from models.session import get_db
+from sqlalchemy import desc
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 
@@ -34,7 +31,7 @@ KNOWLEDGE_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 @router.post("/upload", response_model=ApiResponse)
 async def upload_knowledge_documents(
-    files: List[UploadFile] = File(...),
+    files: list[UploadFile] = File(...),
     doc_category: str = Query("其他", description="文档分类"),
     db: Session = Depends(get_db),
 ):
@@ -89,8 +86,8 @@ async def upload_knowledge_documents(
 
 @router.get("/documents", response_model=ApiResponse)
 def list_knowledge_documents(
-    status_filter: Optional[str] = Query(None, alias="status"),
-    category_filter: Optional[str] = Query(None, alias="category"),
+    status_filter: str | None = Query(None, alias="status"),
+    category_filter: str | None = Query(None, alias="category"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
@@ -239,6 +236,7 @@ async def search_knowledge(
 def _process_document_async(doc_id: int, file_path: str, file_type: str):
     """在后台线程中执行文档处理管道"""
     import threading
+
     from models.session import get_session_local
 
     def _process():

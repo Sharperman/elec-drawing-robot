@@ -1,10 +1,8 @@
 """
 AutoCAD 文字标注和尺寸标注操作
 """
-from loguru import logger
-
-from autocad.connection import autocad_connection
 from autocad.retry import retry_on_com_error
+from loguru import logger
 
 
 def _ensure_layer_in_session(doc, layer_name: str) -> None:
@@ -53,8 +51,8 @@ class AnnotationOps:
         try:
             import pythoncom
             pythoncom.CoInitialize()
-            import win32com.client  # type: ignore
             from config import settings
+            import win32com.client  # type: ignore
 
             acad = win32com.client.GetActiveObject(settings.AUTOCAD_VERSION)
             doc = acad.ActiveDocument
@@ -113,8 +111,8 @@ class AnnotationOps:
         try:
             import pythoncom
             pythoncom.CoInitialize()
-            import win32com.client  # type: ignore
             from config import settings
+            import win32com.client  # type: ignore
 
             acad = win32com.client.GetActiveObject(settings.AUTOCAD_VERSION)
             doc = acad.ActiveDocument
@@ -180,8 +178,8 @@ class AnnotationOps:
         try:
             import pythoncom
             pythoncom.CoInitialize()
-            import win32com.client  # type: ignore
             from config import settings
+            import win32com.client  # type: ignore
 
             acad = win32com.client.GetActiveObject(settings.AUTOCAD_VERSION)
             doc = acad.ActiveDocument

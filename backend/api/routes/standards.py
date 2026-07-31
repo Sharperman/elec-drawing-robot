@@ -7,16 +7,17 @@ PUT    /api/standards/{id}    - 更新规范
 DELETE /api/standards/{id}    - 删除规范
 POST   /api/standards/activate - 激活规范
 """
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-
 from api.schemas import (
-    ApiResponse, DrawingStandardSchema,
-    CreateStandardRequest, UpdateStandardRequest, ActivateStandardRequest,
-    LayerConfigSchema,
+    ActivateStandardRequest,
+    ApiResponse,
+    CreateStandardRequest,
+    DrawingStandardSchema,
+    UpdateStandardRequest,
 )
-from models.session import get_db
+from fastapi import APIRouter, Depends, HTTPException
 from knowledge.standards_manager import StandardsManager
+from models.session import get_db
+from sqlalchemy.orm import Session
 from utils.error_codes import ErrorCode, get_error_message
 
 router = APIRouter()

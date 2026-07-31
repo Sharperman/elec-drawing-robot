@@ -8,13 +8,13 @@ import asyncio
 import json
 import re
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from loguru import logger
 
 from hermes.models.skill import (
-    HermesSkill,
     ExecutionResult,
+    HermesSkill,
     SkillStep,
 )
 
@@ -34,17 +34,17 @@ class SkillExecutor:
     TEMPLATE_PATTERN = re.compile(r"\$\{inputs\.([^}]+)\}")
 
     def __init__(self):
-        self._tool_registry: Dict[str, Any] = {}
+        self._tool_registry: dict[str, Any] = {}
 
     def register_tool(self, name: str, tool_fn: Any) -> None:
         """注册可调用的工具"""
         self._tool_registry[name] = tool_fn
 
-    def register_tools(self, tools: Dict[str, Any]) -> None:
+    def register_tools(self, tools: dict[str, Any]) -> None:
         """批量注册工具"""
         self._tool_registry.update(tools)
 
-    def get_tool_names(self) -> List[str]:
+    def get_tool_names(self) -> list[str]:
         """获取已注册的工具名称列表"""
         return list(self._tool_registry.keys())
 
@@ -53,8 +53,8 @@ class SkillExecutor:
     async def execute(
         self,
         skill: HermesSkill,
-        inputs: Dict[str, Any],
-        interrupt_check: Optional[callable] = None,
+        inputs: dict[str, Any],
+        interrupt_check: callable | None = None,
     ) -> ExecutionResult:
         """
         执行 Skill
@@ -68,8 +68,8 @@ class SkillExecutor:
             ExecutionResult: 执行结果
         """
         start_time = time.monotonic()
-        logs: List[str] = []
-        outputs: List[Dict[str, Any]] = []
+        logs: list[str] = []
+        outputs: list[dict[str, Any]] = []
 
         logger.info(f"开始执行 Skill: {skill.skill_id} (inputs={inputs})")
         logs.append(f"[开始] Skill: {skill.skill_id}")
@@ -127,7 +127,7 @@ class SkillExecutor:
                         error_message=f"步骤 {step_idx + 1} 失败: {result[1]}",
                     )
 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logs.append(f"  ⏰ 步骤 {step_idx + 1} 超时 ({step.timeout_ms}ms)")
                 return ExecutionResult(
                     success=False,
@@ -165,9 +165,9 @@ class SkillExecutor:
 
     def _resolve_params(
         self,
-        params: Dict[str, Any],
-        inputs: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        params: dict[str, Any],
+        inputs: dict[str, Any],
+    ) -> dict[str, Any]:
         """递归解析参数模板"""
         resolved = {}
         for key, value in params.items():
@@ -175,7 +175,7 @@ class SkillExecutor:
         return resolved
 
     def _resolve_value(
-        self, value: Any, inputs: Dict[str, Any]
+        self, value: Any, inputs: dict[str, Any]
     ) -> Any:
         """递归解析单个值中的模板"""
         if isinstance(value, str):
@@ -190,7 +190,7 @@ class SkillExecutor:
         return value
 
     def _resolve_template(
-        self, text: str, inputs: Dict[str, Any]
+        self, text: str, inputs: dict[str, Any]
     ) -> str:
         """解析模板字符串，如 'QF${inputs.number}' → 'QF01'"""
 
@@ -215,9 +215,9 @@ class SkillExecutor:
     async def _execute_step(
         self,
         step: SkillStep,
-        params: Dict[str, Any],
+        params: dict[str, Any],
         step_idx: int,
-    ) -> Tuple[bool, str]:
+    ) -> tuple[bool, str]:
         """执行单个步骤"""
         tool = self._tool_registry.get(step.tool)
 
@@ -251,6 +251,6 @@ class SkillExecutor:
 
     # ─── 工具发现 ──────────────────────────────────────
 
-    def discover_tools(self) -> List[str]:
+    def discover_tools(self) -> list[str]:
         """探索可用的工具"""
         return list(self._tool_registry.keys())

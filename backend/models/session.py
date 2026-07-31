@@ -1,12 +1,12 @@
 """
 SQLAlchemy 数据库会话管理
 """
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator
 
+from loguru import logger
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
-from loguru import logger
 
 
 def _get_db_url() -> str:
@@ -77,12 +77,12 @@ def get_session_local():
 def create_all_tables() -> None:
     """创建所有数据库表（如不存在则创建）"""
     # 导入所有模型以注册到 Base.metadata
-    from models.drawing_session import DrawingSession, ChatMessage  # noqa: F401
-    from models.symbol import Symbol  # noqa: F401
-    from models.standard import DrawingStandard, LayerConfig  # noqa: F401
-    from models.feedback import UserFeedback, LearnedRule  # noqa: F401
-    from models.llm_provider import LLMProvider  # noqa: F401
     from models.drawing_pattern import DrawingPattern  # noqa: F401
+    from models.drawing_session import ChatMessage, DrawingSession  # noqa: F401
+    from models.feedback import LearnedRule, UserFeedback  # noqa: F401
+    from models.llm_provider import LLMProvider  # noqa: F401
+    from models.standard import DrawingStandard, LayerConfig  # noqa: F401
+    from models.symbol import Symbol  # noqa: F401
 
     engine = get_engine()
     Base.metadata.create_all(bind=engine)

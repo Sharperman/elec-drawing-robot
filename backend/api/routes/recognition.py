@@ -4,14 +4,18 @@ POST /api/recognize
 """
 import time
 
+from api.schemas import (
+    ApiResponse,
+    DetectedElement,
+    RecognitionRequest,
+    RecognitionResponse,
+)
 from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
-from sqlalchemy.orm import Session
-
-from api.schemas import ApiResponse, RecognitionRequest, RecognitionResponse, DetectedElement
 from models.session import get_db
+from sqlalchemy.orm import Session
 from utils.error_codes import ErrorCode, get_error_message
-from utils.image_utils import base64_to_image, resize_image_if_needed
+from utils.image_utils import base64_to_image
 
 router = APIRouter()
 
@@ -54,8 +58,8 @@ async def recognize_image(
         raw_detections = detector.predict(processed_image)
 
         # 后处理（置信度过滤 + NMS + 符号映射）
-        from recognition.postprocessor import postprocess
         from config import settings
+        from recognition.postprocessor import postprocess
 
         detections = postprocess(
             raw_detections,

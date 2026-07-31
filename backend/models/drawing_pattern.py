@@ -2,40 +2,42 @@
 DrawingPattern 数据模型 + JSON Schema 校验
 存储从参考图纸中学习到的图纸模式
 """
-from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import Any
 
+from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy import (
-    Column, Integer, String, Text, Boolean,
-    DateTime, ForeignKey, Index,
+    Boolean,
+    Column,
+    DateTime,
+    Index,
+    Integer,
+    String,
+    Text,
 )
 from sqlalchemy.sql import func
-from pydantic import BaseModel, Field, ValidationError
-from loguru import logger
 
 from models.session import Base
-
 
 # ─── JSON 字段 Pydantic Schema ─────────────────────────────────
 
 class TopologySchema(BaseModel):
-    type: Optional[str] = Field(None, description="拓扑类型")
-    voltage_levels: Optional[List[str]] = None
+    type: str | None = Field(None, description="拓扑类型")
+    voltage_levels: list[str] | None = None
 
 
 class DeviceSchema(BaseModel):
     type: str = Field(..., description="设备类型")
-    label_pattern: Optional[str] = None
-    count: Optional[int] = None
+    label_pattern: str | None = None
+    count: int | None = None
 
 
 class AnnotationStyleSchema(BaseModel):
-    font_height: Optional[float] = None
-    prefixes: Optional[Dict[str, str]] = None
-    position: Optional[str] = None
+    font_height: float | None = None
+    prefixes: dict[str, str] | None = None
+    position: str | None = None
 
 
-_PATTERN_SCHEMAS: Dict[str, type[BaseModel]] = {
+_PATTERN_SCHEMAS: dict[str, type[BaseModel]] = {
     "topology": TopologySchema,
     "annotation_style": AnnotationStyleSchema,
 }
@@ -127,7 +129,7 @@ class DrawingPattern(Base):
         """转为 dict（供 API 返回）"""
         import json
 
-        def _parse(v: Optional[str]) -> Optional[object]:
+        def _parse(v: str | None) -> object | None:
             if v is None:
                 return None
             try:

@@ -14,22 +14,20 @@ POST /api/hermes/parse-command    — 解析用户命令
 """
 from __future__ import annotations
 
-import asyncio
 import json
-import uuid
-from datetime import datetime
-from typing import Any, Dict, List, Optional
-
-from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from typing import Any
 
 from api.schemas import ApiResponse
+from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import StreamingResponse
+from loguru import logger
+from pydantic import BaseModel, Field
+
 from hermes import (
-    hermes_state,
     _ensure_default_skills,
     _registry,
     get_hermes_tools,
+    hermes_state,
 )
 from hermes.auto_creator import SkillAutoCreator
 from hermes.models.skill import (
@@ -39,7 +37,6 @@ from hermes.models.skill import (
 )
 from hermes.skill_executor import SkillExecutor
 from hermes.skill_registry import SkillRegistry
-from loguru import logger
 
 router = APIRouter()
 
@@ -50,7 +47,7 @@ class ToggleRequest(BaseModel):
 
 
 class ExecuteRequest(BaseModel):
-    inputs: Dict[str, Any] = Field(
+    inputs: dict[str, Any] = Field(
         default_factory=dict, description="输入参数"
     )
     stream: bool = Field(default=True, description="是否 SSE 流式返回")
@@ -58,7 +55,7 @@ class ExecuteRequest(BaseModel):
 
 class AutoCreateRequest(BaseModel):
     task_description: str = Field(..., description="任务描述")
-    execution_trace: List[Dict[str, Any]] = Field(
+    execution_trace: list[dict[str, Any]] = Field(
         ..., description="执行轨迹"
     )
     auto_confirm: bool = Field(
@@ -71,14 +68,14 @@ class ParseCommandRequest(BaseModel):
 
 
 class SkillUpdateRequest(BaseModel):
-    status: Optional[str] = Field(default=None, description="active|disabled")
+    status: str | None = Field(default=None, description="active|disabled")
 
 
 # ─── 全局单例 ──────────────────────────────────
 
-_skill_executor: Optional[SkillExecutor] = None
-_skill_registry: Optional[SkillRegistry] = None
-_auto_creator: Optional[SkillAutoCreator] = None
+_skill_executor: SkillExecutor | None = None
+_skill_registry: SkillRegistry | None = None
+_auto_creator: SkillAutoCreator | None = None
 
 
 def _get_registry() -> SkillRegistry:
@@ -123,11 +120,14 @@ def _get_creator() -> SkillAutoCreator:
 
 def _hermes_skill_from_builtin(
     builtin_skill: Any
-) -> Optional[HermesSkill]:
+) -> HermesSkill | None:
     """将 Hermes 内置 Skill 转为 HermesSkill 对象"""
     try:
         from hermes.models.skill import (
-            SkillMetadata, SkillExecutionConfig, SkillInputSchema, SkillStep,
+            SkillExecutionConfig,
+            SkillInputSchema,
+            SkillMetadata,
+            SkillStep,
         )
 
         # 内置 Skill 没有(steps)属性，创建单步骤引用自身工具名
@@ -194,7 +194,7 @@ def hermes_status() -> ApiResponse:
 
 @router.get("/skills", response_model=ApiResponse)
 def list_skills(
-    category: Optional[str] = Query(None, description="筛选分类"),
+    category: str | None = Query(None, description="筛选分类"),
 ) -> ApiResponse:
     """列出所有 Hermes Skills"""
     registry = _get_registry()
@@ -251,7 +251,7 @@ def get_skill(skill_id: str) -> ApiResponse:
 @router.post("/skills/{skill_id}/execute")
 async def execute_skill(
     skill_id: str,
-    body: Optional[ExecuteRequest] = None,
+    body: ExecuteRequest | None = None,
 ):
     """执行 Skill（流式 SSE）"""
     registry = _get_registry()
@@ -291,7 +291,6 @@ async def execute_skill(
             yield f"data: {json.dumps(event_data)}\n\n"
 
         # 自定义执行
-        from hermes.models.skill import ExecutionResult
         steps = skill.execution.steps
 
         for step_idx, step in enumerate(steps):
@@ -401,7 +400,7 @@ async def auto_create_skill(body: AutoCreateRequest) -> ApiResponse:
 
 @router.post("/skills/autocreate/confirm", response_model=ApiResponse)
 def confirm_auto_skill(
-    body: Dict[str, Any],
+    body: dict[str, Any],
 ) -> ApiResponse:
     """确认保存自动创建的 Skill"""
     skill_id = body.get("skill_id")
@@ -492,8 +491,8 @@ def parse_command(body: ParseCommandRequest) -> ApiResponse:
 
 
 def _parse_args_to_inputs(
-    args: str, cmd_info: Dict[str, Any]
-) -> Dict[str, str]:
+    args: str, cmd_info: dict[str, Any]
+) -> dict[str, str]:
     """简单参数解析"""
     if not args:
         return {}

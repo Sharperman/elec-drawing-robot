@@ -2,7 +2,6 @@
 图片预处理：灰度化、二值化、去噪、缩放
 用于 YOLOv8 推理前的图像预处理
 """
-from typing import Optional, Tuple
 
 import cv2
 import numpy as np
@@ -52,7 +51,7 @@ class ImagePreprocessor:
     def binarize(
         self,
         image: Image.Image,
-        threshold: Optional[int] = None,
+        threshold: int | None = None,
     ) -> Image.Image:
         """
         二值化处理
@@ -96,7 +95,7 @@ class ImagePreprocessor:
         self,
         img_array: np.ndarray,
         target_size: int,
-        color: Tuple[int, int, int] = (114, 114, 114),
+        color: tuple[int, int, int] = (114, 114, 114),
     ) -> np.ndarray:
         """
         Letterbox 缩放：保持比例，用灰色填充空白

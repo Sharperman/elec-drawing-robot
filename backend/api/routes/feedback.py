@@ -3,12 +3,11 @@
 POST /api/feedback       - 提交反馈
 GET  /api/feedback/rules - 获取已提炼的规则
 """
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
-
 from api.schemas import ApiResponse, FeedbackRequest, LearnedRuleSchema
-from models.session import get_db
+from fastapi import APIRouter, Depends
 from feedback.collector import FeedbackCollector
+from models.session import get_db
+from sqlalchemy.orm import Session
 from utils.error_codes import ErrorCode
 
 router = APIRouter()

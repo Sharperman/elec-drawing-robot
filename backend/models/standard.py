@@ -2,9 +2,8 @@
 绘图规范和图层配置 ORM 模型
 """
 from datetime import datetime
-from typing import Optional
 
-from sqlalchemy import String, Text, DateTime, Float, Boolean, Integer, ForeignKey, func
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from models.session import Base

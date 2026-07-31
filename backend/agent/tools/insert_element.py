@@ -2,12 +2,10 @@
 InsertElement Tool
 根据 symbol_id 和位置将电气图元插入到 AutoCAD
 """
-from typing import Optional, Type
 
 from langchain_core.tools import BaseTool
-from pydantic import BaseModel, Field
-
 from loguru import logger
+from pydantic import BaseModel, Field
 
 
 class InsertElementInput(BaseModel):
@@ -16,10 +14,10 @@ class InsertElementInput(BaseModel):
     x: float = Field(..., description="插入点 X 坐标（AutoCAD 图纸坐标，mm）")
     y: float = Field(..., description="插入点 Y 坐标（mm）")
     rotation: float = Field(default=0.0, description="旋转角度（弧度），0=水平")
-    layer: Optional[str] = Field(None, description="目标图层，None 则使用符号默认图层")
-    label: Optional[str] = Field(None, description="设备编号标注，如 T1、QF1")
+    layer: str | None = Field(None, description="目标图层，None 则使用符号默认图层")
+    label: str | None = Field(None, description="设备编号标注，如 T1、QF1")
     scale: float = Field(default=1.0, description="缩放比例，1.0=原始大小")
-    attributes: Optional[str] = Field(default=None, description="图块属性 JSON 字符串，如 '{\"RATED_V\":\"220V\"}'，可留空")
+    attributes: str | None = Field(default=None, description="图块属性 JSON 字符串，如 '{\"RATED_V\":\"220V\"}'，可留空")
 
 
 class InsertElementTool(BaseTool):
@@ -62,7 +60,7 @@ class InsertElementTool(BaseTool):
         "注意：symbol_id 必须精确匹配上述列表中的值，区分大小写。"
         "例如母线用 BUS_3P（不是 BUS），导线用 WIRE（不是 Line）。"
     )
-    args_schema: Type[BaseModel] = InsertElementInput
+    args_schema: type[BaseModel] = InsertElementInput
 
     def _run(
         self,
@@ -70,10 +68,10 @@ class InsertElementTool(BaseTool):
         x: float,
         y: float,
         rotation: float = 0.0,
-        layer: Optional[str] = None,
-        label: Optional[str] = None,
+        layer: str | None = None,
+        label: str | None = None,
         scale: float = 1.0,
-        attributes: Optional[dict] = None,
+        attributes: dict | None = None,
     ) -> str:
         """
         执行图元插入操作
@@ -82,12 +80,11 @@ class InsertElementTool(BaseTool):
             操作结果描述字符串
         """
         try:
-            from models.session import get_session_local
-            from knowledge.symbol_library import SymbolLibrary
-            from autocad.drawing_ops import drawing_ops
             from autocad.annotation_ops import annotation_ops
+            from autocad.drawing_ops import drawing_ops
             from autocad.layer_manager import layer_manager
-            from autocad.transaction import AutoCADTransaction
+            from knowledge.symbol_library import SymbolLibrary
+            from models.session import get_session_local
 
             # 查询符号定义
             db = get_session_local()()

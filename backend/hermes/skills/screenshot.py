@@ -1,14 +1,14 @@
 """
 Screenshot Skill — 桌面截图
 """
+
 from pydantic import BaseModel, Field
-from typing import Optional, Type
 
 from hermes.skills import HermesSkill
 
 
 class ScreenshotInput(BaseModel):
-    region: Optional[str] = Field(None, description="目标窗口标题关键字（如'AutoCAD'、'Chrome'），不填则全屏")
+    region: str | None = Field(None, description="目标窗口标题关键字（如'AutoCAD'、'Chrome'），不填则全屏")
 
 
 class ScreenshotSkill(HermesSkill):
@@ -18,7 +18,7 @@ class ScreenshotSkill(HermesSkill):
         "不传则全屏截图。返回 base64 编码的图片数据，可供后续视觉分析。"
     )
 
-    def execute(self, region: Optional[str] = None) -> str:
+    def execute(self, region: str | None = None) -> str:
         from desktop import screen_capture
 
         try:

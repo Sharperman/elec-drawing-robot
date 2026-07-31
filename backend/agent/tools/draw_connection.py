@@ -3,12 +3,10 @@ DrawConnection Tool
 连接两个图元，绘制母线或导线
 """
 import json
-from typing import Optional, Type
 
 from langchain_core.tools import BaseTool
-from pydantic import BaseModel, Field
-
 from loguru import logger
+from pydantic import BaseModel, Field
 
 
 class DrawConnectionInput(BaseModel):
@@ -19,11 +17,11 @@ class DrawConnectionInput(BaseModel):
         default="wire",
         description="连线类型：bus=母线（粗线），wire=导线（细线），cable=电缆"
     )
-    layer: Optional[str] = Field(
+    layer: str | None = Field(
         None,
         description="连线图层，不填则根据 line_type 自动选择"
     )
-    via_points: Optional[str] = Field(
+    via_points: str | None = Field(
         None,
         description="折线途径点列表，JSON 字符串如 [[x1,y1],[x2,y2]]"
     )
@@ -46,7 +44,7 @@ class DrawConnectionTool(BaseTool):
         "需要提供两个图元的 Handle（由 insert_element 返回）。"
         "line_type 可选：bus（母线）、wire（导线）、cable（电缆）。"
     )
-    args_schema: Type[BaseModel] = DrawConnectionInput
+    args_schema: type[BaseModel] = DrawConnectionInput
 
     # 连线类型与图层的映射
     _LINE_LAYER_MAP: dict[str, str] = {
@@ -60,16 +58,16 @@ class DrawConnectionTool(BaseTool):
         from_handle: str,
         to_handle: str,
         line_type: str = "wire",
-        layer: Optional[str] = None,
-        via_points: Optional[str] = None,
+        layer: str | None = None,
+        via_points: str | None = None,
     ) -> str:
         """执行连线操作"""
         import pythoncom
         pythoncom.CoInitialize()
 
         try:
-            import win32com.client
             from config import settings
+            import win32com.client
 
             # 在当前线程获取 COM dispatch（不用心跳线程的 doc，避免跨线程 HandleToObject 失败）
             acad = win32com.client.GetActiveObject(settings.AUTOCAD_VERSION)
@@ -105,7 +103,6 @@ class DrawConnectionTool(BaseTool):
                 return f"错误：无法获取图元 {to_handle} 的位置: {e}"
 
             # 绘制连线（不用 AutoCADTransaction，避免跨线程 Undo 标记问题）
-            import win32com.client as wc
             handles: list[str] = []
 
             if parsed_via:

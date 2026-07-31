@@ -2,23 +2,22 @@
 AutoCAD 事务上下文管理器
 支持 commit/rollback（通过 Undo 实现）
 """
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Generator
-
-from loguru import logger
 
 from autocad.connection import autocad_connection
+from loguru import logger
 
 
 class AutoCADTransaction:
     """
     AutoCAD 事务上下文管理器
-    
+
     AutoCAD COM 不支持真正的事务，但可通过 Undo/Redo 实现类似效果：
     - 进入事务时标记一个 Undo 组起始点
     - commit() 什么都不做（保留操作）
     - rollback() 调用 Undo 撤销到起始点
-    
+
     用法：
         async with AutoCADTransaction() as txn:
             drawing_ops.insert_block(...)

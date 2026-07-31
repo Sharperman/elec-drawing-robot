@@ -2,11 +2,10 @@
 模型版本注册表
 管理 YOLOv8 模型的版本、路径和热更新
 """
-import json
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
+import json
 from pathlib import Path
-from typing import Optional
 
 from loguru import logger
 
@@ -26,7 +25,7 @@ class ModelInfo:
 class ModelRegistry:
     """
     YOLOv8 模型版本注册表
-    
+
     管理多个模型版本，支持热切换活跃模型。
     注册表持久化到 JSON 文件。
     """
@@ -44,7 +43,7 @@ class ModelRegistry:
 
         if self._registry_file.exists():
             try:
-                with open(self._registry_file, "r", encoding="utf-8") as f:
+                with open(self._registry_file, encoding="utf-8") as f:
                     data = json.load(f)
                 for name, info in data.items():
                     self._registry[name] = ModelInfo(**info)
@@ -84,7 +83,7 @@ class ModelRegistry:
         path: str,
         version: str,
         accuracy: float = 0.0,
-        classes: Optional[list[str]] = None,
+        classes: list[str] | None = None,
     ) -> ModelInfo:
         """
         注册新模型
@@ -140,7 +139,7 @@ class ModelRegistry:
         logger.info(f"Model activated: {name}")
         return True
 
-    def get_active(self) -> Optional[ModelInfo]:
+    def get_active(self) -> ModelInfo | None:
         """获取当前激活的模型信息"""
         for info in self._registry.values():
             if info.is_active:
@@ -151,7 +150,7 @@ class ModelRegistry:
         """列出所有注册的模型"""
         return list(self._registry.values())
 
-    def get(self, name: str) -> Optional[ModelInfo]:
+    def get(self, name: str) -> ModelInfo | None:
         """通过名称获取模型信息"""
         return self._registry.get(name)
 

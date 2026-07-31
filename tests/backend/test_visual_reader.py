@@ -4,8 +4,7 @@ Tests for:
   - autocad/visual_reader.py - count field type handling, result parsing
 """
 import sys
-import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 
 # Inject win32com stubs

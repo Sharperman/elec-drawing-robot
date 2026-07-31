@@ -2,25 +2,24 @@
 ModifyElement Tool
 修改已有图元的属性、位置或图层
 """
-from typing import Any, Optional, Type
+from typing import Any
 
 from langchain_core.tools import BaseTool
-from pydantic import BaseModel, Field
-
 from loguru import logger
+from pydantic import BaseModel, Field
 
 
 class ModifyElementInput(BaseModel):
     """ModifyElement 工具输入参数"""
-    handle: Optional[str] = Field(
+    handle: str | None = Field(
         None,
         description="目标图元 Handle（修改具体图元时必填）"
     )
-    target_type: Optional[str] = Field(
+    target_type: str | None = Field(
         None,
         description="目标类型：entity=图元，layer=图层"
     )
-    target_name: Optional[str] = Field(
+    target_name: str | None = Field(
         None,
         description="目标名称（target_type=layer 时填图层名）"
     )
@@ -52,24 +51,24 @@ class ModifyElementTool(BaseTool):
         "通过 handle 指定要修改的图元，或通过 target_type='layer' 修改图层属性。"
         "properties 字典中指定要修改的属性和新值。"
     )
-    args_schema: Type[BaseModel] = ModifyElementInput
+    args_schema: type[BaseModel] = ModifyElementInput
 
     def _run(
         self,
         properties: dict[str, Any],
-        handle: Optional[str] = None,
-        target_type: Optional[str] = None,
-        target_name: Optional[str] = None,
+        handle: str | None = None,
+        target_type: str | None = None,
+        target_name: str | None = None,
     ) -> str:
         """执行修改操作"""
         import pythoncom
         pythoncom.CoInitialize()
 
         try:
-            import win32com.client
-            from config import settings
-            from autocad.layer_manager import layer_manager
             from autocad.drawing_ops import drawing_ops
+            from autocad.layer_manager import layer_manager
+            from config import settings
+            import win32com.client
 
             # 在当前线程获取 COM dispatch
             acad = win32com.client.GetActiveObject(settings.AUTOCAD_VERSION)

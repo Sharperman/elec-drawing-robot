@@ -5,10 +5,11 @@ Hermes 不是一个独立 Agent，而是一组可插拔的 Skills。
 每个 Skill 实现标准接口，统一注册为 LangChain Tool，
 在 CU 开关开启时动态注入 DrawAgent 的工具列表。
 """
+from collections.abc import Callable
+from dataclasses import dataclass, field
 import threading
 import time
-from dataclasses import dataclass, field
-from typing import Optional, Callable
+from typing import Optional
 
 
 @dataclass
@@ -88,9 +89,9 @@ def get_hermes_tools():
 
 def _ensure_default_skills():
     """懒加载默认 Skill"""
+    from hermes.skills.browser import BrowserSkill
     from hermes.skills.screenshot import ScreenshotSkill
     from hermes.skills.virtual_input import ClickSkill, TypeTextSkill
-    from hermes.skills.browser import BrowserSkill
     global _registry
     names = {s.__class__.__name__ for s in _registry}
     for cls in [ScreenshotSkill, ClickSkill, TypeTextSkill, BrowserSkill]:

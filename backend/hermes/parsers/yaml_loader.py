@@ -4,23 +4,22 @@ YAML Skill 加载器
 """
 from __future__ import annotations
 
-import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
-import yaml
 from loguru import logger
+import yaml
 
 from hermes.models.skill import (
     HermesSkill,
-    SkillMetadata,
-    SkillTrigger,
-    SkillInputSchema,
-    SkillInputProperty,
-    SkillStep,
-    SkillExecutionConfig,
     SkillCategory,
+    SkillExecutionConfig,
+    SkillInputProperty,
+    SkillInputSchema,
+    SkillMetadata,
     SkillStatus,
+    SkillStep,
+    SkillTrigger,
 )
 
 
@@ -40,9 +39,9 @@ class YAMLLoader:
         if not self._skills_dir.exists():
             self._skills_dir.mkdir(parents=True, exist_ok=True)
 
-    def load_all(self) -> List[HermesSkill]:
+    def load_all(self) -> list[HermesSkill]:
         """从 skills_dir 下所有子目录加载 Skill"""
-        skills: List[HermesSkill] = []
+        skills: list[HermesSkill] = []
         for entry in sorted(self._skills_dir.iterdir()):
             if entry.is_dir():
                 yaml_path = entry / "skill.yaml"
@@ -55,7 +54,7 @@ class YAMLLoader:
                         logger.warning(f"加载 Skill 失败 {yaml_path}: {e}")
         return skills
 
-    def load(self, skill_dir: str) -> Optional[HermesSkill]:
+    def load(self, skill_dir: str) -> HermesSkill | None:
         """从指定目录加载单个 Skill"""
         path = Path(skill_dir)
         if path.is_dir():
@@ -65,7 +64,7 @@ class YAMLLoader:
             return None
         return self._load_single(path)
 
-    def _load_single(self, yaml_path: Path) -> Optional[HermesSkill]:
+    def _load_single(self, yaml_path: Path) -> HermesSkill | None:
         """解析单个 skill.yaml 文件"""
         try:
             raw = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
@@ -100,7 +99,7 @@ class YAMLLoader:
 
             # 构建 Triggers
             triggers_raw = raw.get("triggers")
-            triggers: Optional[SkillTrigger] = None
+            triggers: SkillTrigger | None = None
             if triggers_raw and isinstance(triggers_raw, dict):
                 triggers = SkillTrigger(
                     patterns=triggers_raw.get("patterns", []),
@@ -163,7 +162,7 @@ class YAMLLoader:
             logger.error(f"Skill 构建失败 {yaml_path}: {e}")
             return None
 
-    def save(self, skill: HermesSkill, yaml_path: Optional[Path] = None) -> Path:
+    def save(self, skill: HermesSkill, yaml_path: Path | None = None) -> Path:
         """将 Skill 保存为 YAML 文件"""
         if yaml_path is None:
             yaml_path = self._skills_dir / skill.skill_id / "skill.yaml"
@@ -223,7 +222,7 @@ class YAMLLoader:
         logger.info(f"Skill 已保存: {yaml_path}")
         return yaml_path
 
-    def _check_required(self, data: Dict[str, Any]) -> List[str]:
+    def _check_required(self, data: dict[str, Any]) -> list[str]:
         """检查必需字段"""
         missing = []
         for field in self.REQUIRED_FIELDS:

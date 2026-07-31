@@ -2,25 +2,23 @@
 QueryDrawing Tool
 查询当前图纸中的图元列表和状态，支持 COM 查询和视觉分析双模式
 """
-from typing import Optional, Type
 
 from langchain_core.tools import BaseTool
-from pydantic import BaseModel, Field
-
 from loguru import logger
+from pydantic import BaseModel, Field
 
 
 class QueryDrawingInput(BaseModel):
     """QueryDrawing 工具输入参数"""
-    filter_label: Optional[str] = Field(
+    filter_label: str | None = Field(
         None,
         description="按设备标签过滤，如 'T1' 查询变压器 T1"
     )
-    filter_layer: Optional[str] = Field(
+    filter_layer: str | None = Field(
         None,
         description="按图层过滤，如 'ELEC-PROTECT'"
     )
-    filter_type: Optional[str] = Field(
+    filter_type: str | None = Field(
         None,
         description="按图元类型过滤，如 'AcDbBlockReference'"
     )
@@ -54,13 +52,13 @@ class QueryDrawingTool(BaseTool):
         "对于已有图纸（非本系统绘制的），建议使用 visual 或 auto 模式，\n"
         "因为外部图纸可能不符合本系统的图层和图元规范。"
     )
-    args_schema: Type[BaseModel] = QueryDrawingInput
+    args_schema: type[BaseModel] = QueryDrawingInput
 
     def _run(
         self,
-        filter_label: Optional[str] = None,
-        filter_layer: Optional[str] = None,
-        filter_type: Optional[str] = None,
+        filter_label: str | None = None,
+        filter_layer: str | None = None,
+        filter_type: str | None = None,
         limit: int = 20,
         mode: str = "auto",
     ) -> str:
@@ -113,9 +111,9 @@ class QueryDrawingTool(BaseTool):
 
     def _com_query(
         self,
-        filter_label: Optional[str],
-        filter_layer: Optional[str],
-        filter_type: Optional[str],
+        filter_label: str | None,
+        filter_layer: str | None,
+        filter_type: str | None,
         limit: int,
     ) -> str:
         """COM API 查询"""
@@ -198,7 +196,7 @@ class QueryDrawingTool(BaseTool):
             return True
 
         if standard_layers == 0 and entity_count > 0:
-            logger.info(f"QueryDrawing: no standard layers, enabling visual")
+            logger.info("QueryDrawing: no standard layers, enabling visual")
             return True
 
         logger.info(f"QueryDrawing: COM result looks good ({entity_count} entities, {block_count} blocks), skipping visual")

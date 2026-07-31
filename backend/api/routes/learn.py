@@ -10,22 +10,21 @@ DEL  /api/learn/patterns/{id} - 删除模式
 POST /api/learn/patterns/{id}/apply   - 应用模式到当前绘图
 """
 import asyncio
+from collections.abc import AsyncGenerator
 import json
 import os
-import uuid
 from pathlib import Path
-from typing import AsyncGenerator, Optional
+import uuid
 
-from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, File
-from fastapi.responses import StreamingResponse
-from loguru import logger
-from sqlalchemy.orm import Session
-
-from agent.learn_agent import get_learn_agent, clear_learn_agent
-from models.drawing_pattern import DrawingPattern
-from models.session import get_db
+from agent.learn_agent import clear_learn_agent, get_learn_agent
 from api.schemas import ApiResponse
 from config import settings
+from fastapi import APIRouter, Body, Depends, File, HTTPException, UploadFile
+from fastapi.responses import StreamingResponse
+from loguru import logger
+from models.drawing_pattern import DrawingPattern
+from models.session import get_db
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 
@@ -57,7 +56,6 @@ async def learn_stream(
     async def generate() -> AsyncGenerator[str, None]:
         """在 async 协程中运行 learn_stream。
         AutoCAD COM 操作在主线程执行，LLM 调用通过线程池异步执行。"""
-        import asyncio
         import concurrent.futures
 
         # 创建一个专用线程池用于 LLM 调用（避免阻塞事件循环）
@@ -179,8 +177,8 @@ async def get_pattern(
 @router.post("/patterns/{pattern_id}/confirm", response_model=ApiResponse)
 async def confirm_pattern(
     pattern_id: int,
-    overrides: Optional[dict] = Body(None),
-    user_notes: Optional[str] = Body(None),
+    overrides: dict | None = Body(None),
+    user_notes: str | None = Body(None),
     session_id: str = Body(""),
     confirmed: bool = Body(True),
     db: Session = Depends(get_db),

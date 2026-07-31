@@ -2,21 +2,20 @@
 LangChain Agent 初始化
 AgentExecutor + 6 个 Tool + CanvasState + Memory + 规范上下文注入
 """
+from collections.abc import AsyncIterator
 import json
-from typing import Optional, AsyncIterator
 
+from autocad.canvas_state import CanvasState, get_canvas_state
 from langchain_classic.agents import AgentExecutor, create_openai_tools_agent
-from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, SystemMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from loguru import logger
-
-from autocad.canvas_state import CanvasState, get_canvas_state, destroy_canvas_state
 
 
 class DrawAgent:
     """
     电气图纸绘制 Agent
-    
+
     基于 LangChain OpenAI Tools Agent，集成 6 个工具：
     - InsertElement：插入图元
     - DrawConnection：绘制连线
@@ -24,18 +23,18 @@ class DrawAgent:
     - ModifyElement：修改图元
     - QueryDrawing：查询图纸（COM+视觉）
     - QueryCanvas：查询画布状态记忆（★ 新增）
-    
+
     同时维护画布状态记忆（CanvasState），
     每次工具执行后自动更新，LLM 可随时查询。
     """
 
     def __init__(self, session_id: str) -> None:
         self.session_id = session_id
-        self._executor: Optional[AgentExecutor] = None
+        self._executor: AgentExecutor | None = None
         self._message_history: list[BaseMessage] = []
         self.canvas_state: CanvasState = get_canvas_state(session_id)
 
-    def _build_executor(self, standards_context: str = "", learned_rules: Optional[list[str]] = None, acad_connected: bool = False, drawing_name: str = "") -> AgentExecutor:
+    def _build_executor(self, standards_context: str = "", learned_rules: list[str] | None = None, acad_connected: bool = False, drawing_name: str = "") -> AgentExecutor:
         """
         构建 AgentExecutor（每次调用时动态构建以注入最新规范）
 
@@ -48,15 +47,15 @@ class DrawAgent:
         Returns:
             AgentExecutor 实例
         """
-        from config import settings
         from agent.llm_factory import create_primary_llm
         from agent.prompts.system_prompt import build_system_prompt
-        from agent.tools.insert_element import InsertElementTool
-        from agent.tools.draw_connection import DrawConnectionTool
         from agent.tools.add_annotation import AddAnnotationTool
+        from agent.tools.draw_connection import DrawConnectionTool
+        from agent.tools.insert_element import InsertElementTool
         from agent.tools.modify_element import ModifyElementTool
-        from agent.tools.query_drawing import QueryDrawingTool
         from agent.tools.query_canvas import QueryCanvasTool
+        from agent.tools.query_drawing import QueryDrawingTool
+        from config import settings
 
         # LLM — 通过工厂获取（数据库优先，.env fallback）
         llm = create_primary_llm(
@@ -77,7 +76,7 @@ class DrawAgent:
 
         # Computer Use 开启时注入 Hermes 桌面操作工具
         try:
-            from hermes import hermes_state, get_hermes_tools
+            from hermes import get_hermes_tools, hermes_state
             if hermes_state.enabled:
                 hermes_tools = get_hermes_tools()
                 tools.extend(hermes_tools)
@@ -118,9 +117,9 @@ class DrawAgent:
     async def chat(
         self,
         user_input: str,
-        image_data: Optional[str] = None,
+        image_data: str | None = None,
         standards_context: str = "",
-        learned_rules: Optional[list[str]] = None,
+        learned_rules: list[str] | None = None,
         acad_connected: bool = False,
         drawing_name: str = "",
         mode: str = "auto",
@@ -169,9 +168,9 @@ class DrawAgent:
     async def chat_stream(
         self,
         user_input: str,
-        image_data: Optional[str] = None,
+        image_data: str | None = None,
         standards_context: str = "",
-        learned_rules: Optional[list[str]] = None,
+        learned_rules: list[str] | None = None,
         acad_connected: bool = False,
         drawing_name: str = "",
         mode: str = "auto",
@@ -194,14 +193,17 @@ class DrawAgent:
             - {"type": "done"}
             - {"type": "error", "content": "..."}
         """
-        from config import settings
         from agent.llm_factory import create_primary_llm
-        from agent.tools import (
-            InsertElementTool, DrawConnectionTool,
-            AddAnnotationTool, ModifyElementTool, QueryDrawingTool,
-            QueryCanvasTool,
-        )
         from agent.prompts.system_prompt import build_system_prompt
+        from agent.tools import (
+            AddAnnotationTool,
+            DrawConnectionTool,
+            InsertElementTool,
+            ModifyElementTool,
+            QueryCanvasTool,
+            QueryDrawingTool,
+        )
+        from config import settings
 
         # 构建系统提示词（含模式特定指令）
         mode_instruction = self._build_mode_instruction(mode)
@@ -232,7 +234,7 @@ class DrawAgent:
 
         # Computer Use 开启时注入 Hermes 桌面操作工具
         try:
-            from hermes import hermes_state, get_hermes_tools
+            from hermes import get_hermes_tools, hermes_state
             if hermes_state.enabled:
                 tools.extend(get_hermes_tools())
         except Exception:
@@ -367,7 +369,7 @@ JSON 格式：
 ```
 
 请严格按照上述格式输出，确保 JSON 完整闭合。"""
-        
+
         elif mode == "draw":
             return """【当前模式：绘图模式 /Draw】
 
@@ -385,7 +387,7 @@ JSON 格式：
 - AddAnnotation：添加文字标注
 - ModifyElement：修改已有图元属性
 - QueryDrawing：查询当前图纸信息"""
-        
+
         else:  # auto
             return """【当前模式：自动模式 /Auto】
 

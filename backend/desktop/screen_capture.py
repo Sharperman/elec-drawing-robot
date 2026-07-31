@@ -4,16 +4,14 @@
 """
 import base64
 import io
-from typing import Optional, List, Tuple
 
+from loguru import logger
 import mss
 import mss.tools
-from PIL import Image
-from loguru import logger
 
 try:
-    import win32gui
     import win32con
+    import win32gui
     HAS_WIN32 = True
 except ImportError:
     HAS_WIN32 = False
@@ -99,7 +97,7 @@ class ScreenCapture:
             logger.error(f"Numpy 全屏截图失败: {e}")
             return None
 
-    def get_window_list(self) -> List[dict]:
+    def get_window_list(self) -> list[dict]:
         """枚举所有可见窗口"""
         if not HAS_WIN32:
             return []
@@ -132,7 +130,7 @@ class ScreenCapture:
             "top": monitor["top"],
         }
 
-    def _find_window(self, title_substring: str) -> Optional[int]:
+    def _find_window(self, title_substring: str) -> int | None:
         """按标题模糊查找窗口句柄"""
         if not HAS_WIN32:
             return None

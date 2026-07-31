@@ -2,10 +2,9 @@
 多轮对话上下文管理器
 存储/检索当前图纸状态、已插入图元、意图链
 """
-import json
 from collections import deque
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 
 class DrawingContextManager:
@@ -28,7 +27,7 @@ class DrawingContextManager:
         self._intent_history: deque[dict] = deque(maxlen=max_history)
 
         # 待确认的操作计划
-        self._pending_plan: Optional[str] = None
+        self._pending_plan: str | None = None
 
         # 当前图纸元信息
         self._drawing_meta: dict[str, Any] = {
@@ -52,7 +51,7 @@ class DrawingContextManager:
         x: float,
         y: float,
         layer: str = "0",
-        label: Optional[str] = None,
+        label: str | None = None,
     ) -> None:
         """注册一个已插入的图元"""
         self._entity_registry[handle] = {
@@ -75,11 +74,11 @@ class DrawingContextManager:
             return True
         return False
 
-    def get_entity(self, handle: str) -> Optional[dict[str, Any]]:
+    def get_entity(self, handle: str) -> dict[str, Any] | None:
         """通过 Handle 获取图元信息"""
         return self._entity_registry.get(handle)
 
-    def find_entity_by_label(self, label: str) -> Optional[dict[str, Any]]:
+    def find_entity_by_label(self, label: str) -> dict[str, Any] | None:
         """通过设备标签查找图元"""
         for entity in self._entity_registry.values():
             if entity.get("label") == label:
@@ -94,7 +93,7 @@ class DrawingContextManager:
     # 意图历史
     # ============================================================
 
-    def add_intent(self, intent_type: str, user_input: str, result: Optional[str] = None) -> None:
+    def add_intent(self, intent_type: str, user_input: str, result: str | None = None) -> None:
         """记录一条意图"""
         self._intent_history.append(
             {
@@ -118,7 +117,7 @@ class DrawingContextManager:
         """设置待用户确认的操作计划"""
         self._pending_plan = plan
 
-    def get_pending_plan(self) -> Optional[str]:
+    def get_pending_plan(self) -> str | None:
         """获取待确认的计划"""
         return self._pending_plan
 

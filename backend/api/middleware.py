@@ -4,14 +4,13 @@
 - 全局异常处理
 - CORS（在 main.py 已配置，此处补充异常处理）
 """
+from collections.abc import Callable
 import time
 import traceback
-from typing import Callable
 
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from loguru import logger
-
 from utils.error_codes import ErrorCode, get_error_message
 
 

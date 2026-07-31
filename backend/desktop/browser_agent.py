@@ -4,7 +4,6 @@ Playwright 浏览器 Agent
 """
 import asyncio
 import base64
-from typing import Optional
 
 from loguru import logger
 

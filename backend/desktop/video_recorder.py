@@ -2,15 +2,12 @@
 视频录制引擎
 mss 截图 → OpenCV MP4 编码 → 队列消费线程 → 分段文件。
 """
-import os
+from pathlib import Path
 import queue
 import threading
 import time
-from pathlib import Path
-from typing import Optional, List
 
 import cv2
-import numpy as np
 from loguru import logger
 
 
@@ -34,11 +31,11 @@ class VideoRecorder:
         self._frame_count = 0
         self._total_frames = 0
         self._segment_index = 0
-        self._writer: Optional[cv2.VideoWriter] = None
-        self._writer_thread: Optional[threading.Thread] = None
-        self._capture_thread: Optional[threading.Thread] = None
+        self._writer: cv2.VideoWriter | None = None
+        self._writer_thread: threading.Thread | None = None
+        self._capture_thread: threading.Thread | None = None
         self._frame_queue = queue.Queue(maxsize=300)  # 最多缓冲 300 帧
-        self._segments: List[str] = []
+        self._segments: list[str] = []
         self._start_time: float = 0
         self._session_id: str = ""
         self._screen_width = 1920

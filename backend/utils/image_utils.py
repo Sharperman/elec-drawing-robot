@@ -5,11 +5,9 @@
 import base64
 import io
 from pathlib import Path
-from typing import Optional, Tuple
 
 from loguru import logger
 from PIL import Image
-
 
 # 支持的图片格式（MIME type 映射）
 SUPPORTED_FORMATS: dict[str, str] = {
@@ -122,7 +120,7 @@ def file_to_base64(file_path: str | Path) -> str:
     return f"data:{mime};base64,{b64_data}"
 
 
-def validate_image_bytes(data: bytes) -> Tuple[bool, Optional[str]]:
+def validate_image_bytes(data: bytes) -> tuple[bool, str | None]:
     """
     校验字节数据是否为有效图片
 

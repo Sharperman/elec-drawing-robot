@@ -16,10 +16,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional
 
 from loguru import logger
-
 
 # ════════════════════════════════════════════════════════════════
 # 数据类
@@ -30,7 +28,7 @@ class CanvasDevice:
     """画布上的一个设备"""
     handle: str
     symbol_id: str                        # e.g., "CB_3P", "TR_2W"
-    label: Optional[str] = None           # e.g., "QF1", "T1"
+    label: str | None = None           # e.g., "QF1", "T1"
     x: float = 0.0
     y: float = 0.0
     layer: str = "0"
@@ -48,11 +46,11 @@ class CanvasConnection:
     """设备间连线（母线/导线/电缆）"""
     from_handle: str
     to_handle: str
-    from_label: Optional[str] = None
-    to_label: Optional[str] = None
+    from_label: str | None = None
+    to_label: str | None = None
     line_type: str = "wire"               # "bus" | "wire" | "cable"
     layer: str = "ELEC-WIRE"
-    via_points: Optional[list] = None     # [[x1,y1],[x2,y2],...]
+    via_points: list | None = None     # [[x1,y1],[x2,y2],...]
     connected_at: datetime = field(default_factory=datetime.utcnow)
 
 
@@ -63,7 +61,7 @@ class CanvasAnnotation:
     text: str
     x: float = 0.0
     y: float = 0.0
-    target_handle: Optional[str] = None   # 标注属于哪个设备
+    target_handle: str | None = None   # 标注属于哪个设备
     height: float = 3.5
     annotation_type: str = "text"         # "text" | "dim" | "leader"
     annotated_at: datetime = field(default_factory=datetime.utcnow)
@@ -110,7 +108,7 @@ class CanvasState:
         symbol_id: str,
         x: float,
         y: float,
-        label: Optional[str] = None,
+        label: str | None = None,
         layer: str = "0",
         rotation: float = 0.0,
         scale: float = 1.0,
@@ -138,7 +136,7 @@ class CanvasState:
         to_handle: str,
         line_type: str = "wire",
         layer: str = "ELEC-WIRE",
-        via_points: Optional[list] = None,
+        via_points: list | None = None,
     ) -> None:
         """记录连线"""
         from_label = self._resolve_label(from_handle)
@@ -161,7 +159,7 @@ class CanvasState:
         text: str,
         x: float,
         y: float,
-        target_handle: Optional[str] = None,
+        target_handle: str | None = None,
         height: float = 3.5,
         annotation_type: str = "text",
     ) -> None:
@@ -269,9 +267,9 @@ class CanvasState:
 
     def find_devices(
         self,
-        label: Optional[str] = None,
-        symbol_id: Optional[str] = None,
-        layer: Optional[str] = None,
+        label: str | None = None,
+        symbol_id: str | None = None,
+        layer: str | None = None,
     ) -> list[CanvasDevice]:
         """按条件查找设备"""
         results = self.devices
@@ -283,7 +281,7 @@ class CanvasState:
             results = [d for d in results if d.layer.upper() == layer.upper()]
         return results
 
-    def find_device_by_handle(self, handle: str) -> Optional[CanvasDevice]:
+    def find_device_by_handle(self, handle: str) -> CanvasDevice | None:
         for d in self.devices:
             if d.handle == handle:
                 return d
@@ -382,7 +380,7 @@ class CanvasState:
         for d in self.devices:
             self._expand_bounds(d.x, d.y)
 
-    def _resolve_label(self, handle: str) -> Optional[str]:
+    def _resolve_label(self, handle: str) -> str | None:
         d = self.find_device_by_handle(handle)
         return d.label if d else None
 

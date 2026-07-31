@@ -1,13 +1,11 @@
 """
 绘图规范管理 CRUD
 """
-from typing import Optional
 import json
 
 from loguru import logger
-from sqlalchemy.orm import Session
-
 from models.standard import DrawingStandard, LayerConfig
+from sqlalchemy.orm import Session
 
 
 class StandardsManager:
@@ -16,7 +14,7 @@ class StandardsManager:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def get_active(self) -> Optional[DrawingStandard]:
+    def get_active(self) -> DrawingStandard | None:
         """获取当前激活的规范"""
         return (
             self.db.query(DrawingStandard)
@@ -24,11 +22,11 @@ class StandardsManager:
             .first()
         )
 
-    def get_by_id(self, standard_id: int) -> Optional[DrawingStandard]:
+    def get_by_id(self, standard_id: int) -> DrawingStandard | None:
         """通过 ID 获取规范"""
         return self.db.query(DrawingStandard).filter_by(id=standard_id).first()
 
-    def get_by_name(self, name: str) -> Optional[DrawingStandard]:
+    def get_by_name(self, name: str) -> DrawingStandard | None:
         """通过名称获取规范"""
         return self.db.query(DrawingStandard).filter_by(name=name).first()
 
@@ -44,7 +42,7 @@ class StandardsManager:
         text_style: str = "Standard",
         text_height: float = 3.5,
         dim_style: str = "Standard",
-        title_block: Optional[dict] = None,
+        title_block: dict | None = None,
     ) -> DrawingStandard:
         """创建新规范"""
         existing = self.get_by_name(name)
@@ -67,7 +65,7 @@ class StandardsManager:
         logger.info(f"Standard created: {name}")
         return standard
 
-    def activate(self, standard_id: int) -> Optional[DrawingStandard]:
+    def activate(self, standard_id: int) -> DrawingStandard | None:
         """激活指定规范（取消其他规范的激活状态）"""
         # 取消所有规范的激活状态
         self.db.query(DrawingStandard).update({"is_active": False})
@@ -82,7 +80,7 @@ class StandardsManager:
         logger.info(f"Standard activated: {standard.name}")
         return standard
 
-    def update(self, standard_id: int, **kwargs) -> Optional[DrawingStandard]:
+    def update(self, standard_id: int, **kwargs) -> DrawingStandard | None:
         """更新规范属性"""
         standard = self.get_by_id(standard_id)
         if not standard:

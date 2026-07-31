@@ -2,11 +2,8 @@
 CAD 操作录制引擎
 定期截图 + COM 状态采样 → 差量检测 → OperationStep
 """
-import json
 import threading
 import time
-from pathlib import Path
-from typing import Optional
 
 from loguru import logger
 
@@ -20,9 +17,9 @@ class BackgroundRecorder:
     """
 
     def __init__(self):
-        self._session_id: Optional[int] = None
+        self._session_id: int | None = None
         self._running = False
-        self._sampler_thread: Optional[threading.Thread] = None
+        self._sampler_thread: threading.Thread | None = None
         self._steps: list = []  # 内存中的步骤列表
         self._last_entities: dict = {}  # {handle: type} 上一帧快照
         self._start_time = 0

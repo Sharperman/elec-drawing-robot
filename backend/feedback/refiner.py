@@ -4,13 +4,10 @@
 """
 import json
 import uuid
-from typing import Optional
 
 from loguru import logger
+from models.feedback import LearnedRule, UserFeedback
 from sqlalchemy.orm import Session
-
-from models.feedback import UserFeedback, LearnedRule
-
 
 REFINE_PROMPT = """你是电气工程智能绘图系统的学习模块。
 
@@ -115,11 +112,11 @@ class FeedbackRefiner:
         logger.info(f"Refined {len(new_rules)} rules from {len(unprocessed)} feedbacks")
         return new_rules
 
-    async def _call_llm_refine(self, feedback_summary: str) -> Optional[list[dict]]:
+    async def _call_llm_refine(self, feedback_summary: str) -> list[dict] | None:
         """调用 LLM 提炼规则"""
         try:
-            from langchain_core.messages import HumanMessage
             from agent.llm_factory import create_primary_llm
+            from langchain_core.messages import HumanMessage
 
             llm = create_primary_llm(
                 temperature=0.3,

@@ -2,8 +2,8 @@
 日志配置
 使用 loguru 进行日志管理，支持文件轮转、彩色控制台输出
 """
-import sys
 from pathlib import Path
+import sys
 
 from loguru import logger
 
@@ -11,7 +11,7 @@ from loguru import logger
 def setup_logger() -> logger.__class__:
     """
     初始化 loguru logger
-    
+
     Returns:
         配置完成的 logger 实例
     """

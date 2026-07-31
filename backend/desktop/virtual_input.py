@@ -3,14 +3,13 @@
 通过 PostMessage/SendMessage 向目标窗口发消息，不移动物理鼠标。
 """
 import time
-from typing import Optional
 
 from loguru import logger
 
 try:
-    import win32gui
-    import win32con
     import win32api
+    import win32con
+    import win32gui
     HAS_WIN32 = True
 except ImportError:
     HAS_WIN32 = False
@@ -59,7 +58,7 @@ class VirtualInput:
         if not HAS_WIN32:
             raise RuntimeError("win32gui/win32api 不可用")
 
-    def find_window_by_title(self, title_substring: str) -> Optional[int]:
+    def find_window_by_title(self, title_substring: str) -> int | None:
         """按标题模糊查找窗口句柄"""
         self._ensure_win32()
         result = []
@@ -74,7 +73,7 @@ class VirtualInput:
             pass
         return result[0] if result else None
 
-    def click(self, x: int, y: int, hwnd: Optional[int] = None, button: str = "left") -> bool:
+    def click(self, x: int, y: int, hwnd: int | None = None, button: str = "left") -> bool:
         """
         向指定窗口发送点击消息
         x, y: 相对于窗口客户区的坐标
@@ -100,7 +99,7 @@ class VirtualInput:
             logger.warning(f"虚拟点击失败: {e}")
             return False
 
-    def double_click(self, x: int, y: int, hwnd: Optional[int] = None) -> bool:
+    def double_click(self, x: int, y: int, hwnd: int | None = None) -> bool:
         """双击"""
         self._ensure_win32()
         try:
@@ -112,7 +111,7 @@ class VirtualInput:
             logger.warning(f"双击失败: {e}")
             return False
 
-    def move_mouse(self, x: int, y: int, hwnd: Optional[int] = None) -> bool:
+    def move_mouse(self, x: int, y: int, hwnd: int | None = None) -> bool:
         """移动鼠标（不显示物理光标移动，仅更新窗口内的鼠标位置）"""
         self._ensure_win32()
         try:
@@ -124,7 +123,7 @@ class VirtualInput:
             logger.warning(f"移动鼠标失败: {e}")
             return False
 
-    def type_text(self, text: str, hwnd: Optional[int] = None) -> bool:
+    def type_text(self, text: str, hwnd: int | None = None) -> bool:
         """向窗口发送文本（WM_CHAR）"""
         self._ensure_win32()
         try:
@@ -137,7 +136,7 @@ class VirtualInput:
             logger.warning(f"输入文本失败: {e}")
             return False
 
-    def press_key(self, key: str, hwnd: Optional[int] = None) -> bool:
+    def press_key(self, key: str, hwnd: int | None = None) -> bool:
         """按下并释放一个键"""
         self._ensure_win32()
         try:
@@ -156,7 +155,7 @@ class VirtualInput:
             logger.warning(f"按键失败 '{key}': {e}")
             return False
 
-    def scroll(self, clicks: int, x: int = 0, y: int = 0, hwnd: Optional[int] = None) -> bool:
+    def scroll(self, clicks: int, x: int = 0, y: int = 0, hwnd: int | None = None) -> bool:
         """滚轮滚动。正数向上，负数向下"""
         self._ensure_win32()
         try:
@@ -169,7 +168,7 @@ class VirtualInput:
             logger.warning(f"滚动失败: {e}")
             return False
 
-    def hotkey(self, keys: list, hwnd: Optional[int] = None) -> bool:
+    def hotkey(self, keys: list, hwnd: int | None = None) -> bool:
         """发送组合键，如 ['ctrl', 'c']"""
         self._ensure_win32()
         try:

@@ -8,8 +8,7 @@ AutoCAD 缩放控制模块
 - get_view_extents: 获取当前视口范围
 用于 /learn 模式的多尺度图纸学习
 """
-from typing import Optional, Tuple
-import pythoncom
+
 from loguru import logger
 
 
@@ -135,7 +134,7 @@ class ZoomController:
             logger.error(f"ZoomScale 失败: {e}")
             return False
 
-    def get_view_extents(self) -> Optional[Tuple[float, float, float, float]]:
+    def get_view_extents(self) -> tuple[float, float, float, float] | None:
         """
         获取当前视口范围
         返回 (min_x, min_y, max_x, max_y) 图纸坐标
@@ -188,7 +187,7 @@ class ZoomController:
 
 
 # 全局单例
-_zoom_ctrl: Optional[ZoomController] = None
+_zoom_ctrl: ZoomController | None = None
 
 
 def get_zoom_controller() -> ZoomController:

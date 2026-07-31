@@ -9,13 +9,13 @@ Tests for:
   - main.py                  - GET /health
 """
 import sys
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
 from fastapi.testclient import TestClient
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
-
 
 # ============================================================
 # Inject win32com stubs BEFORE importing any backend modules
@@ -47,10 +47,10 @@ _inject_win32_stubs()
 def _preload_lazy_modules() -> None:
     """Import modules referenced lazily inside chat.py route handlers."""
     try:
-        import knowledge.rag_retriever   # noqa: F401
-        import feedback.injector          # noqa: F401
-        import agent.draw_agent           # noqa: F401
-        import agent.context_manager      # noqa: F401
+        import agent.context_manager  # noqa: F401
+        import agent.draw_agent  # noqa: F401
+        import feedback.injector  # noqa: F401
+        import knowledge.rag_retriever  # noqa: F401
     except Exception:
         pass  # If any optional module fails, skip silently
 
@@ -71,12 +71,12 @@ def test_engine():
     sqlite3 connection, so tables created by create_all() are visible to all
     subsequent sessions.
     """
-    from models.session import Base
     # Import all models so they register on Base.metadata
-    import models.drawing_session   # noqa: F401
-    import models.symbol            # noqa: F401
-    import models.standard          # noqa: F401
-    import models.feedback          # noqa: F401
+    import models.drawing_session  # noqa: F401
+    import models.feedback  # noqa: F401
+    from models.session import Base
+    import models.standard  # noqa: F401
+    import models.symbol  # noqa: F401
 
     engine = create_engine(
         "sqlite:///:memory:",

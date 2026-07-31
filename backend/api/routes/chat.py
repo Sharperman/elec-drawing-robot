@@ -4,23 +4,25 @@ POST /api/chat        - 非流式对话
 GET  /api/chat/stream - SSE 流式对话
 POST /api/chat/confirm - 确认执行计划
 """
-import asyncio
+from collections.abc import AsyncIterator
+from datetime import datetime
 import json
 import uuid
-from datetime import datetime
-from typing import AsyncIterator
 
+from api.schemas import (
+    ApiResponse,
+    ChatConfirmRequest,
+    ChatRequest,
+    CreateSessionRequest,
+    MessageSchema,
+    SessionSchema,
+)
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from loguru import logger
-from sqlalchemy.orm import Session
-
-from api.schemas import (
-    ApiResponse, ChatRequest, ChatConfirmRequest,
-    MessageSchema, CreateSessionRequest, SessionSchema,
-)
+from models.drawing_session import ChatMessage, DrawingSession
 from models.session import get_db
-from models.drawing_session import DrawingSession, ChatMessage
+from sqlalchemy.orm import Session
 from utils.error_codes import ErrorCode, get_error_message
 
 router = APIRouter()
@@ -131,11 +133,11 @@ async def chat(
 
     try:
         # 获取 RAG 规范上下文
-        from knowledge.rag_retriever import rag_retriever
-        from knowledge.electrical_standards import electrical_standards
-        from feedback.injector import rule_injector
         from agent.draw_agent import get_agent
         from autocad.connection import autocad_connection
+        from feedback.injector import rule_injector
+        from knowledge.electrical_standards import electrical_standards
+        from knowledge.rag_retriever import rag_retriever
 
         standards_context = await rag_retriever.build_context(request.message)
         _, learned_rules = rule_injector.inject(request.session_id, standards_context)
@@ -247,11 +249,11 @@ async def chat_stream(
         full_response = ""
 
         try:
-            from knowledge.rag_retriever import rag_retriever
-            from knowledge.electrical_standards import electrical_standards
-            from feedback.injector import rule_injector
             from agent.draw_agent import get_agent
             from autocad.connection import autocad_connection
+            from feedback.injector import rule_injector
+            from knowledge.electrical_standards import electrical_standards
+            from knowledge.rag_retriever import rag_retriever
 
             # 获取 RAG 规范上下文
             standards_context = await rag_retriever.build_context(message)
@@ -596,7 +598,7 @@ def _repair_truncated_json(text: str) -> dict | None:
         data = json.loads(repaired)
         logger.info(f"JSON repaired: added {len(closing)} closing brackets")
         return data
-    except json.JSONDecodeError as e:
+    except json.JSONDecodeError:
         # 尝试更激进的修复：去除最后一个不完整的行
         lines = repaired.split('\n')
         for trim in range(1, min(6, len(lines))):
@@ -667,7 +669,6 @@ async def _analyze_draw_intent(
         操作计划 dict，包含 summary 和 operations 列表；分析失败返回 None
     """
     try:
-        from config import settings
         from agent.llm_factory import create_primary_llm
 
         llm = create_primary_llm(
@@ -751,7 +752,6 @@ async def _auto_validate_after_draw(
         校验结果 dict，包含 issues 列表；失败返回 None
     """
     try:
-        from config import settings
         from agent.llm_factory import create_primary_llm
         from autocad.connection import autocad_connection
 

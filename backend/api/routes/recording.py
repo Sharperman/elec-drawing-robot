@@ -7,19 +7,17 @@ GET    /api/recording/sessions/{id} — 会话详情 + 步骤列表
 POST   /api/recording/sessions/{id}/analyze — 手动触发分析
 POST   /api/recording/sessions/{id}/delete — 删除录制
 """
-import json
 import datetime
+import json
 import uuid
-from pathlib import Path
-
-from fastapi import APIRouter, Depends, HTTPException, Query
-from loguru import logger
-from sqlalchemy.orm import Session
-from sqlalchemy import desc
 
 from api.schemas import ApiResponse
+from fastapi import APIRouter, Depends, HTTPException, Query
+from loguru import logger
 from models.operation_session import OperationSession, OperationStep
 from models.session import get_db
+from sqlalchemy import desc
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 
@@ -32,8 +30,8 @@ def start_recording(
     db: Session = Depends(get_db),
 ):
     """开始录制"""
-    from desktop.video_recorder import video_recorder
     from agent.background_recorder import background_recorder
+    from desktop.video_recorder import video_recorder
 
     session_id_str = uuid.uuid4().hex[:12]
 
@@ -61,8 +59,8 @@ def start_recording(
 @router.post("/stop", response_model=ApiResponse)
 def stop_recording(db: Session = Depends(get_db)):
     """停止录制"""
-    from desktop.video_recorder import video_recorder
     from agent.background_recorder import background_recorder
+    from desktop.video_recorder import video_recorder
 
     # 停止录制引擎
     video_info = video_recorder.stop()

@@ -2,11 +2,16 @@
 OperationSession + OperationStep 数据模型
 录制 CAD 操作会话和步骤，用于后台学习和回放。
 """
-from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import (
-    Column, Integer, String, Text, Float, DateTime, ForeignKey, Index,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
 )
 from sqlalchemy.sql import func
 

@@ -2,13 +2,10 @@
 用户反馈收集器
 接收用户反馈并持久化到 SQLite
 """
-from typing import Optional
-import uuid
 
 from loguru import logger
-from sqlalchemy.orm import Session
-
 from models.feedback import UserFeedback
+from sqlalchemy.orm import Session
 
 
 class FeedbackCollector:
@@ -24,9 +21,9 @@ class FeedbackCollector:
         original_input: str = "",
         agent_output: str = "",
         user_comment: str = "",
-        correction: Optional[str] = None,
-        rating: Optional[int] = None,
-        message_id: Optional[int] = None,
+        correction: str | None = None,
+        rating: int | None = None,
+        message_id: int | None = None,
     ) -> UserFeedback:
         """
         收集用户反馈并保存到数据库
@@ -114,9 +111,9 @@ class FeedbackCollector:
 
     def get_feedbacks(
         self,
-        session_id: Optional[str] = None,
-        feedback_type: Optional[str] = None,
-        processed: Optional[bool] = None,
+        session_id: str | None = None,
+        feedback_type: str | None = None,
+        processed: bool | None = None,
         limit: int = 50,
     ) -> list[UserFeedback]:
         """

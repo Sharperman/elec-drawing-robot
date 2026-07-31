@@ -2,12 +2,10 @@
 AutoCAD 图元绘图操作
 insert_block, delete_entity, move_entity, get_all_entities
 """
-from typing import Any, Optional
+from typing import Any
 
-from loguru import logger
-
-from autocad.connection import autocad_connection
 from autocad.retry import retry_on_com_error
+from loguru import logger
 
 
 def _ensure_layer_in_session(doc, layer_name: str) -> None:
@@ -30,14 +28,14 @@ def _ensure_layer_in_session(doc, layer_name: str) -> None:
 def _get_com_objects():
     """
     在当前线程获取 AutoCAD COM 对象（避免跨线程 STA 冲突）
-    
+
     每次调用都通过 GetActiveObject 重新获取 dispatch，
     确保 COM 对象属于当前线程的 STA apartment。
     """
     import pythoncom
     pythoncom.CoInitialize()
-    import win32com.client  # type: ignore
     from config import settings
+    import win32com.client  # type: ignore
 
     acad = win32com.client.GetActiveObject(settings.AUTOCAD_VERSION)
     doc = acad.ActiveDocument
@@ -59,7 +57,7 @@ class DrawingOps:
         y_scale: float = 1.0,
         rotation: float = 0.0,
         layer: str = "0",
-        attributes: Optional[dict[str, str]] = None,
+        attributes: dict[str, str] | None = None,
     ) -> str:
         """
         在 ModelSpace 中插入图块
@@ -85,9 +83,8 @@ class DrawingOps:
         try:
             import pythoncom
             pythoncom.CoInitialize()
-            import win32com.client  # type: ignore
-
             from config import settings
+            import win32com.client  # type: ignore
             acad = win32com.client.GetActiveObject(settings.AUTOCAD_VERSION)
             doc = acad.ActiveDocument
             model_space = doc.ModelSpace
@@ -188,8 +185,8 @@ class DrawingOps:
         try:
             import pythoncom
             pythoncom.CoInitialize()
-            import win32com.client  # type: ignore
             from config import settings
+            import win32com.client  # type: ignore
 
             acad = win32com.client.GetActiveObject(settings.AUTOCAD_VERSION)
             doc = acad.ActiveDocument
@@ -288,8 +285,8 @@ class DrawingOps:
         try:
             import pythoncom
             pythoncom.CoInitialize()
-            import win32com.client  # type: ignore
             from config import settings
+            import win32com.client  # type: ignore
 
             acad = win32com.client.GetActiveObject(settings.AUTOCAD_VERSION)
             doc = acad.ActiveDocument
@@ -342,8 +339,8 @@ class DrawingOps:
         """
         import pythoncom
         pythoncom.CoInitialize()
-        import win32com.client
         from config import settings
+        import win32com.client
 
         acad = win32com.client.GetActiveObject(settings.AUTOCAD_VERSION)
         doc = acad.ActiveDocument

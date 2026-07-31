@@ -27,7 +27,6 @@
 """
 
 from dataclasses import dataclass, field
-from typing import Optional
 
 
 @dataclass
@@ -354,7 +353,7 @@ class ElectricalStandards:
     def format_checklist() -> str:
         """格式化为审查清单（注入 Agent Prompt）"""
         lines = ["## 电气图纸审查清单", ""]
-        
+
         categories: dict[str, list[CheckRule]] = {}
         for rule in CHECK_RULES:
             categories.setdefault(rule.category, []).append(rule)
@@ -370,42 +369,42 @@ class ElectricalStandards:
                 for item in r.check_items:
                     lines.append(f"  - [ ] {item.item}: {item.detail}")
                 lines.append("")
-        
+
         return "\n".join(lines)
 
     @staticmethod
     def build_review_context(query: str = "") -> str:
         """
         构建注入 Agent 的审查上下文
-        
+
         Args:
             query: 用户查询（可用于规则筛选，当前版本返回全部规则）
-            
+
         Returns:
             格式化的规范上下文字符串
         """
         parts = []
-        
+
         parts.append("## 电气规范知识库（图纸审查参考）")
         parts.append("")
         parts.append("以下为电气图纸审查应遵循的主要规范和检查要点：")
         parts.append("")
-        
+
         # 列出引用的标准
         parts.append("### 引用标准")
         refs = sorted(set(r.gb_ref for r in CHECK_RULES))
         for ref in refs:
             parts.append(f"- {ref}")
         parts.append("")
-        
+
         # 审查清单
         parts.append(ElectricalStandards.format_checklist())
-        
+
         parts.append("---")
         parts.append("**审查说明**: 请基于上述审查清单，结合从图纸中提取的实际信息，逐项检查并给出审查结论。")
         parts.append("对于每项检查，应明确给出：✅通过 / ⚠️需改进 / ❌不通过 / —不适用")
         parts.append("")
-        
+
         return "\n".join(parts)
 
 

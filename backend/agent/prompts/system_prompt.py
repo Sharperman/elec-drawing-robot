@@ -2,12 +2,11 @@
 系统提示词模块
 包含 Agent 的角色定义、规范约束注入、输出格式要求
 """
-from typing import Optional
 
 
 def build_system_prompt(
     standards_context: str = "",
-    learned_rules: Optional[list[str]] = None,
+    learned_rules: list[str] | None = None,
     acad_connected: bool = False,
     drawing_name: str = "",
 ) -> str:

@@ -2,10 +2,8 @@
 文本分块和向量化引擎
 将处理后的文档文本切分为适合检索的 chunk，并写入 ChromaDB。
 """
-import hashlib
 import json
 import re
-from typing import List, Dict, Optional
 
 from loguru import logger
 
@@ -20,7 +18,7 @@ class DocumentChunker:
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
 
-    def chunk(self, text: str, metadata: Optional[dict] = None) -> List[dict]:
+    def chunk(self, text: str, metadata: dict | None = None) -> list[dict]:
         """
         将文本分块，返回 [{text, char_count, chunk_index, metadata}, ...]
         """
@@ -73,7 +71,7 @@ class DocumentChunker:
         logger.info(f"分块完成: {len(chunks)} chunks from {len(text)} chars")
         return chunks
 
-    def _make_chunk(self, paragraphs: List[str], index: int, meta: dict) -> dict:
+    def _make_chunk(self, paragraphs: list[str], index: int, meta: dict) -> dict:
         text = "\n\n".join(paragraphs)
         return {
             "text": text,
@@ -82,7 +80,7 @@ class DocumentChunker:
             "metadata": {**meta, "chunk_index": index},
         }
 
-    def _split_long_paragraph(self, text: str) -> List[str]:
+    def _split_long_paragraph(self, text: str) -> list[str]:
         """将超长段落按句号分割"""
         sentences = re.split(r'(?<=[。.!！?？])\s*', text)
         chunks = []

@@ -2,12 +2,10 @@
 图元符号库 CRUD 操作
 """
 import json
-from typing import Optional
 
 from loguru import logger
-from sqlalchemy.orm import Session
-
 from models.symbol import Symbol
+from sqlalchemy.orm import Session
 
 
 class SymbolLibrary:
@@ -16,18 +14,18 @@ class SymbolLibrary:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def get_by_id(self, symbol_id: str) -> Optional[Symbol]:
+    def get_by_id(self, symbol_id: str) -> Symbol | None:
         """通过 symbol_id 获取符号"""
         return self.db.query(Symbol).filter_by(symbol_id=symbol_id, is_active=True).first()
 
-    def get_by_pk(self, pk: int) -> Optional[Symbol]:
+    def get_by_pk(self, pk: int) -> Symbol | None:
         """通过数据库主键获取符号"""
         return self.db.query(Symbol).filter_by(id=pk, is_active=True).first()
 
     def list_all(
         self,
-        category: Optional[str] = None,
-        search: Optional[str] = None,
+        category: str | None = None,
+        search: str | None = None,
         page: int = 1,
         page_size: int = 50,
     ) -> tuple[list[Symbol], int]:
@@ -72,7 +70,7 @@ class SymbolLibrary:
         layer: str = "ELEC-SYMBOL",
         width: float = 1.0,
         height: float = 1.0,
-        tags: Optional[list[str]] = None,
+        tags: list[str] | None = None,
     ) -> Symbol:
         """创建新图元符号"""
         existing = self.get_by_id(symbol_id)
@@ -102,7 +100,7 @@ class SymbolLibrary:
         self,
         symbol_id: str,
         **kwargs,
-    ) -> Optional[Symbol]:
+    ) -> Symbol | None:
         """更新图元符号属性"""
         symbol = self.get_by_id(symbol_id)
         if not symbol:

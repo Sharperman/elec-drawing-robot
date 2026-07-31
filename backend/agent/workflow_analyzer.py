@@ -2,10 +2,6 @@
 工作流分析器
 录制结束后，手动触发 LLM 分析操作序列，生成 WorkflowPattern。
 """
-import json
-import threading
-from pathlib import Path
-from typing import Optional
 
 from loguru import logger
 

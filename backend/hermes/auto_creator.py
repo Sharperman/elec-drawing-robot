@@ -8,24 +8,23 @@ Skill Auto-Creator — 自动从成功任务提取可复用 Skill
 """
 from __future__ import annotations
 
+from datetime import datetime
 import json
 import re
-from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from loguru import logger
 
 from hermes.models.skill import (
     HermesSkill,
-    SkillMetadata,
-    SkillTrigger,
-    SkillStep,
-    SkillExecutionConfig,
-    SkillInputSchema,
-    SkillInputProperty,
     SkillCategory,
+    SkillExecutionConfig,
+    SkillInputProperty,
+    SkillInputSchema,
+    SkillMetadata,
     SkillStatus,
-    ExecutionResult,
+    SkillStep,
+    SkillTrigger,
 )
 
 
@@ -46,7 +45,7 @@ class SkillAutoCreator:
     # 需要人工确认的置信度阈值
     AUTO_CONFIRM_THRESHOLD = 0.9
 
-    def __init__(self, llm_client: Optional[Any] = None):
+    def __init__(self, llm_client: Any | None = None):
         self._llm = llm_client
 
     def set_llm(self, llm_client: Any) -> None:
@@ -58,8 +57,8 @@ class SkillAutoCreator:
     async def create_from_execution(
         self,
         task_description: str,
-        execution_trace: List[Dict[str, Any]],
-        user_confirmation: Optional[bool] = None,
+        execution_trace: list[dict[str, Any]],
+        user_confirmation: bool | None = None,
     ) -> AutoGenResult:
         """
         从执行轨迹创建 Skill
@@ -161,8 +160,8 @@ class SkillAutoCreator:
     async def _llm_generate_metadata(
         self,
         task_description: str,
-        steps: List[Dict[str, Any]],
-    ) -> Tuple[Dict[str, Any], float]:
+        steps: list[dict[str, Any]],
+    ) -> tuple[dict[str, Any], float]:
         """使用 LLM 分析任务并生成 Skill 元数据"""
         if not self._llm:
             return self._rule_generate_metadata(task_description, steps)
@@ -186,8 +185,8 @@ class SkillAutoCreator:
     def _build_llm_prompt(
         self,
         task: str,
-        steps: List[Dict[str, Any]],
-    ) -> List[Dict[str, str]]:
+        steps: list[dict[str, Any]],
+    ) -> list[dict[str, str]]:
         """构建 LLM Prompt"""
         steps_str = json.dumps(steps, ensure_ascii=False, indent=2)
         return [
@@ -217,8 +216,8 @@ class SkillAutoCreator:
     def _rule_generate_metadata(
         self,
         task_description: str,
-        steps: List[Dict[str, Any]],
-    ) -> Tuple[Dict[str, Any], float]:
+        steps: list[dict[str, Any]],
+    ) -> tuple[dict[str, Any], float]:
         """基于规则的元数据生成（无需 LLM）"""
         # 从任务描述提取关键词作为触发词
         triggers = self._extract_triggers(task_description)
@@ -243,11 +242,11 @@ class SkillAutoCreator:
     # ─── 辅助方法 ─────────────────────────────────────
 
     def _infer_inputs(
-        self, steps: List[Dict[str, Any]]
+        self, steps: list[dict[str, Any]]
     ) -> SkillInputSchema:
         """从步骤参数推断输入 Schema"""
-        properties: Dict[str, SkillInputProperty] = {}
-        required: List[str] = []
+        properties: dict[str, SkillInputProperty] = {}
+        required: list[str] = []
 
         for step in steps:
             params = step.get("params", {})
@@ -281,7 +280,7 @@ class SkillAutoCreator:
             return "array"
         return "string"
 
-    def _extract_triggers(self, text: str) -> List[str]:
+    def _extract_triggers(self, text: str) -> list[str]:
         """从文本提取触发词"""
         # 基本清洗
         text = text.strip().strip("。！？，.")
@@ -328,7 +327,7 @@ class SkillAutoCreator:
         # 限制长度
         return cleaned[:64]
 
-    def _extract_json(self, text: str) -> Optional[Dict[str, Any]]:
+    def _extract_json(self, text: str) -> dict[str, Any] | None:
         """从文本中提取 JSON"""
         # 尝试直接解析
         try:
@@ -357,7 +356,7 @@ class SkillAutoCreator:
     def _generate_summary(
         self,
         skill: HermesSkill,
-        steps: List[Dict[str, Any]],
+        steps: list[dict[str, Any]],
     ) -> str:
         """生成摘要"""
         return (
@@ -373,7 +372,7 @@ class AutoGenResult:
 
     def __init__(
         self,
-        skill: Optional[HermesSkill],
+        skill: HermesSkill | None,
         confidence: float,
         message: str,
         requires_confirmation: bool = True,
@@ -383,7 +382,7 @@ class AutoGenResult:
         self.message = message
         self.requires_confirmation = requires_confirmation
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """转为字典"""
         return {
             "skill_id": self.skill.skill_id if self.skill else None,

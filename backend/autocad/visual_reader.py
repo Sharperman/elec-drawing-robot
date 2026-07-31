@@ -3,7 +3,6 @@
 通过截图 + 多模态 LLM 理解图纸内容，弥补 COM API 对非标准图纸的识别盲区
 """
 import json
-from typing import Optional
 
 from loguru import logger
 

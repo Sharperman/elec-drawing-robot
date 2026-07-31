@@ -3,11 +3,9 @@
 使用 pydantic-settings 从 .env 文件读取配置
 """
 from pathlib import Path
-from typing import List
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field, model_validator
-
 
 # 关键路径常量
 ROOT_DIR = Path(__file__).parent.parent                        # elec-drawing-robot/
@@ -47,7 +45,7 @@ class Settings(BaseSettings):
 
     # ---- 服务器 ----
     PORT: int = Field(default=8765, description="FastAPI 监听端口")
-    CORS_ORIGINS: List[str] = Field(
+    CORS_ORIGINS: list[str] = Field(
         default=[
             "http://localhost:5173",
             "http://127.0.0.1:5173",
@@ -141,7 +139,6 @@ for _dir in [settings.DB_PATH, settings.CHROMA_PATH, settings.LOG_DIR, settings.
     p.mkdir(parents=True, exist_ok=True)
 
 # 启动时配置校验（P2-9）
-import sys as _sys
 
 _errors = []
 if not settings.OPENAI_API_KEY:
@@ -156,4 +153,3 @@ if _errors:
     _log = logging.getLogger("config")
     for err in _errors:
         _log.warning(f"⚠️  配置警告: {err}")
-

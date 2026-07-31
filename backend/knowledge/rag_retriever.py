@@ -1,11 +1,9 @@
 """
 RAG 检索器：从向量数据库检索相关规范片段供 Agent 使用
 """
-from typing import Optional
-
-from loguru import logger
 
 from knowledge.vector_store import vector_store
+from loguru import logger
 
 
 class RAGRetriever:
@@ -50,7 +48,7 @@ class RAGRetriever:
         self,
         query: str,
         top_k: int = 5,
-        category: Optional[str] = None,
+        category: str | None = None,
     ) -> list[dict]:
         """
         检索与查询最相关的图元符号

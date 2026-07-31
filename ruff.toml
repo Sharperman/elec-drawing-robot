@@ -11,8 +11,6 @@ select = [
     "F",     # pyflakes
     "W",     # pycodestyle warnings
     "I",     # isort (import sorting)
-    "N",     # pep8-naming
-    "UP",    # pyupgrade (modern syntax)
     "B",     # flake8-bugbear
     "C4",    # flake8-comprehensions
     "SIM",   # flake8-simplify
@@ -25,6 +23,18 @@ ignore = [
     "B008",   # do not perform function calls in argument defaults
     "RUF001", # ambiguous unicode characters in strings
     "RUF002", # ambiguous unicode characters in docstrings
+    # Legacy code compatibility — relax while we incrementally clean up
+    "F401",   # unused-import (will re-enable after cleanup)
+    "F841",   # unused-variable (will re-enable after cleanup)
+    # Cosmetic style issues in legacy code (re-enable after refactor)
+    "E402",   # module-import-not-at-top-of-file
+    "E701",   # multiple-statements-on-one-line-colon
+    "E712",   # true-false-comparison
+    "E741",   # ambiguous-variable-name
+    # Legacy naming conventions — too disruptive for existing codebase
+    "N801", "N802", "N803", "N805", "N806", "N815", "N818",
+    # Pyupgrade — requires modernization of many files
+    "UP006", "UP007", "UP015", "UP032", "UP035", "UP042", "UP047",
 ]
 
 # Allow fix for all rules

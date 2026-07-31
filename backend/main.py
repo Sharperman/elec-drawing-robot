@@ -2,20 +2,33 @@
 FastAPI 应用入口
 注册所有路由、CORS、lifespan 事件、健康检查
 """
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import AsyncGenerator
 
-import uvicorn
+from api.middleware import register_exception_handlers
+from api.routes import (
+    autocad,
+    chat,
+    feedback,
+    knowledge,
+    learn,
+    llm,
+    logs,
+    recognition,
+    recording,
+    standards,
+    symbols,
+    templates,
+    vendor_docs,
+)
+from config import settings
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-
-from config import settings
-from utils.logger import setup_logger
-from models.session import create_all_tables
-from api.middleware import register_exception_handlers
-from api.routes import chat, recognition, autocad, standards, symbols, feedback, logs, templates, vendor_docs, llm, learn, knowledge, recording
 from hermes.router import router as hermes_router
+from models.session import create_all_tables
+from utils.logger import setup_logger
+import uvicorn
 
 # 初始化日志（最先执行）
 logger = setup_logger()
@@ -45,8 +58,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # 3. 导入默认数据（图元符号库 + 规范）
     try:
-        import sys as _sys
         from pathlib import Path as _Path
+        import sys as _sys
         _scripts_dir = str(_Path(__file__).parent.parent / "scripts")
         if _scripts_dir not in _sys.path:
             _sys.path.insert(0, _scripts_dir)
@@ -68,8 +81,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # 4. 每日数据库自动备份（保留最近 7 天）
     try:
+        from datetime import date as _date
+        from datetime import timedelta as _td
         import shutil
-        from datetime import date as _date, timedelta as _td
         db_path = Path(settings.DB_PATH)
         backup_dir = db_path.parent / "backups"
         backup_dir.mkdir(parents=True, exist_ok=True)
@@ -109,8 +123,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # 2. SQLite WAL checkpoint（防止未落盘数据丢失）
     try:
-        from sqlalchemy import text as _sa_text
         from models.session import get_engine
+        from sqlalchemy import text as _sa_text
         engine = get_engine()
         with engine.connect() as conn:
             result = conn.execute(_sa_text("PRAGMA wal_checkpoint(TRUNCATE)"))

@@ -1,15 +1,15 @@
 """
 Browser Skill — Playwright 浏览器自动化
 """
+
 from pydantic import BaseModel, Field
-from typing import Optional
 
 from hermes.skills import HermesSkill
 
 
 class BrowserInput(BaseModel):
     action: str = Field(..., description="操作: navigate / search / screenshot / get_text")
-    url_or_query: Optional[str] = Field(None, description="URL 或 搜索关键词")
+    url_or_query: str | None = Field(None, description="URL 或 搜索关键词")
     engine: str = Field("baidu", description="搜索引擎: google / bing / baidu")
 
 
@@ -21,7 +21,7 @@ class BrowserSkill(HermesSkill):
         "搜索默认使用百度。使用独立的浏览器实例，不干扰用户当前浏览器。"
     )
 
-    def execute(self, action: str, url_or_query: Optional[str] = None,
+    def execute(self, action: str, url_or_query: str | None = None,
                 engine: str = "baidu") -> str:
         from desktop.browser_agent import SyncBrowserAgent
 

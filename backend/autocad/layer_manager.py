@@ -2,11 +2,9 @@
 AutoCAD 图层管理操作
 ensure_layer, set_layer_color, set_layer_linetype
 """
-from loguru import logger
-
 from autocad.connection import autocad_connection
 from autocad.retry import retry_on_com_error
-
+from loguru import logger
 
 # AutoCAD 颜色常量
 AUTOCAD_BYLAYER = 256
@@ -64,8 +62,8 @@ class LayerManager:
         try:
             import pythoncom
             pythoncom.CoInitialize()
-            import win32com.client  # type: ignore
             from config import settings
+            import win32com.client  # type: ignore
             acad = win32com.client.GetActiveObject(settings.AUTOCAD_VERSION)
             doc = acad.ActiveDocument
             layers = doc.Layers
@@ -152,8 +150,8 @@ class LayerManager:
         根据当前激活规范初始化所有标准图层
         （启动时或切换规范时调用）
         """
-        from models.session import get_session_local
         from knowledge.standards_manager import StandardsManager
+        from models.session import get_session_local
 
         db = get_session_local()()
         try:

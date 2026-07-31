@@ -4,12 +4,10 @@ GET /api/logs/list    - 列出日志文件
 GET /api/logs/view    - 查看日志内容（支持分页和过滤）
 """
 from pathlib import Path
-from typing import Optional
-
-from fastapi import APIRouter, Query, HTTPException
-from pydantic import BaseModel
 
 from config import settings
+from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel
 
 router = APIRouter()
 
@@ -62,8 +60,8 @@ async def list_logs() -> dict:
 @router.get("/view")
 async def view_log(
     file: str = Query(default="app.log", description="日志文件名"),
-    level: Optional[str] = Query(default=None, description="按级别过滤: DEBUG/INFO/WARNING/ERROR"),
-    search: Optional[str] = Query(default=None, description="搜索关键词"),
+    level: str | None = Query(default=None, description="按级别过滤: DEBUG/INFO/WARNING/ERROR"),
+    search: str | None = Query(default=None, description="搜索关键词"),
     page: int = Query(default=1, ge=1, description="页码"),
     page_size: int = Query(default=100, ge=10, le=500, description="每页行数"),
 ) -> dict:
@@ -83,7 +81,7 @@ async def view_log(
 
     # 读取文件
     try:
-        with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+        with open(file_path, encoding="utf-8", errors="replace") as f:
             raw_lines = [line.rstrip("\n") for line in f]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to read log: {e}")

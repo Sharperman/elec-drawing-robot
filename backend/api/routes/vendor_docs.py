@@ -3,14 +3,12 @@
 POST /api/vendor-docs/parse  - 上传 PDF/图片，提取设备参数
 POST /api/vendor-docs/apply  - 将解析结果应用到当前图纸
 """
-import json
 import base64
-import tempfile
-from pathlib import Path
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
-from loguru import logger
+import json
 
 from api.schemas import ApiResponse
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from loguru import logger
 
 router = APIRouter()
 
@@ -97,8 +95,8 @@ async def apply_vendor_result(
         return ApiResponse(message="没有可应用的设备", data={})
 
     try:
-        from autocad.connection import autocad_connection
         from agent.draw_agent import get_agent
+        from autocad.connection import autocad_connection
 
         acad = autocad_connection
         if not acad.is_connected:
@@ -150,6 +148,7 @@ def _extract_pdf_text(content: bytes, filename: str) -> str:
     """从 PDF 提取文本"""
     try:
         import io
+
         from PyPDF2 import PdfReader
 
         reader = PdfReader(io.BytesIO(content))

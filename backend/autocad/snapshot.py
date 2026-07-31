@@ -5,14 +5,12 @@ AutoCAD 截图与矢量导出工具
 - capture(): Win32 窗口截图（快速光栅图，用于常规场景）
 - capture_vector(): DXF→SVG 矢量导出（永不模糊，白色线条自动转黑）
 """
+import base64
 import io
 import os
 import tempfile
-import base64
-from typing import Optional, Literal
 
 from loguru import logger
-
 
 # 超分目标宽度（None=不超分，使用原始窗口尺寸）
 DEFAULT_UPSCALE_WIDTH = 3840  # 4K 宽度
@@ -33,8 +31,8 @@ class AutoCADSnapshot:
 
     def capture(
         self,
-        width: Optional[int] = None,
-        height: Optional[int] = None,
+        width: int | None = None,
+        height: int | None = None,
         upscale: bool = True,
     ) -> str:
         """
@@ -73,7 +71,7 @@ class AutoCADSnapshot:
 
     def capture_vector(
         self,
-        output_dir: Optional[str] = None,
+        output_dir: str | None = None,
         white_to_black: bool = True,
         dpi: int = 150,
     ) -> str:
@@ -149,12 +147,12 @@ class AutoCADSnapshot:
     # 矢量导出内部实现
     # ──────────────────────────────────────────────
 
-    def _saveas_dxf(self, output_dir: Optional[str] = None) -> str:
+    def _saveas_dxf(self, output_dir: str | None = None) -> str:
         """通过 AutoCAD COM SaveAs 导出 DXF 临时文件"""
         import pythoncom
         pythoncom.CoInitialize()
-        import win32com.client
         from config import settings
+        import win32com.client
 
         acad = win32com.client.GetActiveObject(settings.AUTOCAD_VERSION)
         doc = acad.ActiveDocument
@@ -193,7 +191,7 @@ class AutoCADSnapshot:
         3. 绕过 ezdxf 字体引擎，直接用系统 TTF 中文字体（Microsoft YaHei）
         """
         import ezdxf
-        from ezdxf.addons.drawing import RenderContext, Frontend
+        from ezdxf.addons.drawing import Frontend, RenderContext
         from ezdxf.addons.drawing.matplotlib import MatplotlibBackend
         import matplotlib
         matplotlib.use("Agg")
@@ -255,8 +253,8 @@ class AutoCADSnapshot:
         # 后处理：设置所有线条宽度
         if line_width is not None:
             for child in ax.get_children():
-                import matplotlib.lines as mlines
                 import matplotlib.collections as mcoll
+                import matplotlib.lines as mlines
                 if isinstance(child, (mlines.Line2D,)):
                     child.set_linewidth(line_width)
                 elif isinstance(child, mcoll.LineCollection):
@@ -404,7 +402,6 @@ class AutoCADSnapshot:
         Returns:
             修改的实体+图层总数
         """
-        import ezdxf
 
         changed = 0
 
@@ -462,8 +459,8 @@ class AutoCADSnapshot:
     @staticmethod
     def _ensure_window_visible(hwnd: int) -> tuple[int, int]:
         """确保 AutoCAD 窗口在可见区域，返回 (width, height)"""
-        import win32gui
         import win32con
+        import win32gui
 
         rect = win32gui.GetWindowRect(hwnd)
         x, y = rect[0], rect[1]
@@ -492,16 +489,16 @@ class AutoCADSnapshot:
 
     def _capture_via_com(
         self,
-        width: Optional[int] = None,
-        height: Optional[int] = None,
-        upscale_width: Optional[int] = None,
+        width: int | None = None,
+        height: int | None = None,
+        upscale_width: int | None = None,
     ) -> str:
         """通过 AutoCAD COM Export 导出"""
         import pythoncom
         pythoncom.CoInitialize()
-        import win32com.client
         from config import settings
         from PIL import Image
+        import win32com.client
 
         acad = win32com.client.GetActiveObject(settings.AUTOCAD_VERSION)
         doc = acad.ActiveDocument
@@ -545,15 +542,15 @@ class AutoCADSnapshot:
 
     def _capture_via_screenshot(
         self,
-        width: Optional[int] = None,
-        height: Optional[int] = None,
-        upscale_width: Optional[int] = None,
+        width: int | None = None,
+        height: int | None = None,
+        upscale_width: int | None = None,
     ) -> str:
         """通过 Win32 API 截取 AutoCAD 窗口"""
         import pythoncom
         pythoncom.CoInitialize()
-        import win32com.client
         from config import settings
+        import win32com.client
 
         acad = win32com.client.GetActiveObject(settings.AUTOCAD_VERSION)
         hwnd = self._get_acad_hwnd(acad)
@@ -561,9 +558,9 @@ class AutoCADSnapshot:
 
     def _capture_via_findwindow(
         self,
-        width: Optional[int] = None,
-        height: Optional[int] = None,
-        upscale_width: Optional[int] = None,
+        width: int | None = None,
+        height: int | None = None,
+        upscale_width: int | None = None,
     ) -> str:
         """通过 FindWindow 查找 AutoCAD 窗口"""
         import win32gui
@@ -603,15 +600,15 @@ class AutoCADSnapshot:
     def _capture_window(
         self,
         hwnd: int,
-        width: Optional[int] = None,
-        height: Optional[int] = None,
-        upscale_width: Optional[int] = None,
+        width: int | None = None,
+        height: int | None = None,
+        upscale_width: int | None = None,
     ) -> str:
         """通用的 Win32 窗口截图 + 可选 Lanczos 超分"""
+        from PIL import Image
+        import win32con
         import win32gui
         import win32ui
-        import win32con
-        from PIL import Image
 
         win_w, win_h = self._ensure_window_visible(hwnd)
 
@@ -650,9 +647,9 @@ class AutoCADSnapshot:
     def _finalize_image(
         self,
         img,
-        width: Optional[int] = None,
-        height: Optional[int] = None,
-        upscale_width: Optional[int] = None,
+        width: int | None = None,
+        height: int | None = None,
+        upscale_width: int | None = None,
     ) -> str:
         """最终化图片：可选缩放 + 可选 Lanczos 超分 → base64 PNG"""
         from PIL import Image, ImageEnhance

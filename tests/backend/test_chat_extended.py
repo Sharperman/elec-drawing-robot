@@ -6,10 +6,10 @@ Tests for:
   - _parse_review_json
 """
 import sys
-import json
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
 from fastapi.testclient import TestClient
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -31,10 +31,7 @@ _inject_win32_stubs()
 # Pre-load lazy modules
 def _preload_lazy_modules() -> None:
     try:
-        import knowledge.rag_retriever
-        import feedback.injector
-        import agent.draw_agent
-        import agent.context_manager
+        pass
     except Exception:
         pass
 
@@ -46,10 +43,6 @@ _preload_lazy_modules()
 @pytest.fixture(scope="module")
 def test_engine():
     from models.session import Base
-    import models.drawing_session
-    import models.symbol
-    import models.standard
-    import models.feedback
 
     engine = create_engine(
         "sqlite:///:memory:",

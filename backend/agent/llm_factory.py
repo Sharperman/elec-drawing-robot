@@ -6,14 +6,11 @@ LLM 工厂服务
 2. 运行时从数据库读取激活的 Provider
 3. 向后兼容 config.py 的 fallback（数据库无记录时使用 .env）
 """
-from typing import Optional
-from functools import lru_cache
 
 from langchain_openai import ChatOpenAI
 from loguru import logger
-from sqlalchemy.orm import Session
-
 from models.llm_provider import LLMProvider
+from sqlalchemy.orm import Session
 
 
 def _build_llm(
@@ -21,7 +18,7 @@ def _build_llm(
     base_url: str,
     model: str,
     temperature: float = 1.0,
-    max_tokens: Optional[int] = None,
+    max_tokens: int | None = None,
     streaming: bool = False,
 ) -> ChatOpenAI:
     """构建 ChatOpenAI 实例（兼容 OpenAI 格式的 API）"""
@@ -38,7 +35,7 @@ def _build_llm(
     return ChatOpenAI(**kwargs)
 
 
-def _get_provider_from_db(db: Session, vision: bool = False) -> Optional[LLMProvider]:
+def _get_provider_from_db(db: Session, vision: bool = False) -> LLMProvider | None:
     """从数据库获取当前激活的 Provider"""
     try:
         field = LLMProvider.is_vision if vision else LLMProvider.is_primary
@@ -76,10 +73,10 @@ def _get_env_fallback(vision: bool = False) -> dict:
 
 
 def create_primary_llm(
-    db: Optional[Session] = None,
+    db: Session | None = None,
     streaming: bool = False,
-    temperature: Optional[float] = None,
-    max_tokens: Optional[int] = None,
+    temperature: float | None = None,
+    max_tokens: int | None = None,
 ) -> ChatOpenAI:
     """
     创建主力 LLM 实例（用于文本推理/Agent 对话）
@@ -122,10 +119,10 @@ def create_primary_llm(
 
 
 def create_vision_llm(
-    db: Optional[Session] = None,
+    db: Session | None = None,
     streaming: bool = False,
-    temperature: Optional[float] = None,
-    max_tokens: Optional[int] = None,
+    temperature: float | None = None,
+    max_tokens: int | None = None,
 ) -> ChatOpenAI:
     """
     创建多模态 LLM 实例（用于视觉分析/截图理解）
@@ -168,7 +165,7 @@ def create_vision_llm(
 
 
 def get_llm_config_for_httpx(
-    db: Optional[Session] = None,
+    db: Session | None = None,
     vision: bool = False,
 ) -> dict:
     """

@@ -7,15 +7,16 @@ PUT    /api/symbols/{id}      - 更新
 DELETE /api/symbols/{id}      - 软删除
 GET    /api/symbols/search    - 搜索
 """
-from fastapi import APIRouter, Depends, Query, HTTPException
-from sqlalchemy.orm import Session
-
 from api.schemas import (
-    ApiResponse, SymbolSchema,
-    CreateSymbolRequest, UpdateSymbolRequest, PagedResponse,
+    ApiResponse,
+    CreateSymbolRequest,
+    SymbolSchema,
+    UpdateSymbolRequest,
 )
-from models.session import get_db
+from fastapi import APIRouter, Depends, HTTPException, Query
 from knowledge.symbol_library import SymbolLibrary
+from models.session import get_db
+from sqlalchemy.orm import Session
 from utils.error_codes import ErrorCode, get_error_message
 
 router = APIRouter()

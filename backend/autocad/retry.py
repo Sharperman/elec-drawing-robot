@@ -2,9 +2,10 @@
 AutoCAD COM 操作重试装饰器
 指数退避，最多重试 3 次
 """
+from collections.abc import Callable
 import functools
 import time
-from typing import Any, Callable, TypeVar
+from typing import Any, TypeVar
 
 from loguru import logger
 

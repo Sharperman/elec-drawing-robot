@@ -3,9 +3,8 @@ LLM Provider ORM 模型
 支持多个供应商独立配置，统一供应商以 model 区分，保留最新 API Key
 """
 from datetime import datetime
-from typing import Optional
 
-from sqlalchemy import String, Text, DateTime, Boolean, Integer, Float, func
+from sqlalchemy import Boolean, DateTime, Float, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from models.session import Base
@@ -60,11 +59,11 @@ class LLMProvider(Base):
         Boolean, nullable=False, default=True,
         comment="是否启用",
     )
-    last_tested_at: Mapped[Optional[datetime]] = mapped_column(
+    last_tested_at: Mapped[datetime | None] = mapped_column(
         DateTime, nullable=True,
         comment="最后测试连接时间",
     )
-    test_status: Mapped[Optional[str]] = mapped_column(
+    test_status: Mapped[str | None] = mapped_column(
         String(20), nullable=True,
         comment="测试连接状态: ok / fail / unknown",
     )

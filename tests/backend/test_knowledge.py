@@ -6,11 +6,11 @@ Tests for:
   - feedback/collector.py        - FeedbackCollector.collect()
 """
 import json
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import MagicMock, patch
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
 
 # ============================================================
 # SQLite in-memory DB fixture

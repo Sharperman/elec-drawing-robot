@@ -3,7 +3,6 @@
 快速识别用户意图：绘图指令/查询/规范配置/图片识别/一般对话
 """
 from enum import Enum
-from typing import Optional
 
 from loguru import logger
 
@@ -53,7 +52,7 @@ _CONFIRM_KEYWORDS = [
 class IntentParser:
     """
     意图分类器
-    
+
     优先使用规则匹配（快速、无 LLM 成本），
     规则无法确定时降级到 LLM 分类。
     """
@@ -127,7 +126,7 @@ class IntentParser:
 
         return IntentType.CHAT
 
-    def _rule_based_classify(self, text: str) -> Optional[IntentType]:
+    def _rule_based_classify(self, text: str) -> IntentType | None:
         """基于关键词的规则分类"""
         if any(kw in text for kw in _CONFIRM_KEYWORDS) and len(text) < 30:
             return IntentType.CONFIRM
@@ -146,11 +145,11 @@ class IntentParser:
 
         return None
 
-    async def _llm_classify(self, user_input: str) -> Optional[IntentType]:
+    async def _llm_classify(self, user_input: str) -> IntentType | None:
         """使用 LLM 进行精确意图分类"""
-        from langchain_core.messages import HumanMessage
         from agent.llm_factory import create_primary_llm
         from agent.prompts.system_prompt import INTENT_CLASSIFICATION_PROMPT
+        from langchain_core.messages import HumanMessage
 
         llm = create_primary_llm(
             temperature=0.0,

@@ -2,8 +2,8 @@
 Pytest configuration for backend tests.
 Adds the backend directory to sys.path so all imports resolve correctly.
 """
-import sys
 import os
+import sys
 
 # Ensure backend/ is on the path for all test modules
 BACKEND_DIR = os.path.join(os.path.dirname(__file__), "..", "backend")

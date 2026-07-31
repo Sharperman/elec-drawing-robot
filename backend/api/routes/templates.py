@@ -6,9 +6,9 @@ POST /api/templates/{id}/apply - 应用模板到当前 AutoCAD 图纸
 """
 import json
 from pathlib import Path
-from fastapi import APIRouter, HTTPException
 
 from api.schemas import ApiResponse
+from fastapi import APIRouter, HTTPException
 
 router = APIRouter()
 
@@ -20,7 +20,7 @@ def _load_templates() -> list[dict]:
     """加载所有模板"""
     if not TEMPLATES_FILE.exists():
         return []
-    with open(TEMPLATES_FILE, "r", encoding="utf-8") as f:
+    with open(TEMPLATES_FILE, encoding="utf-8") as f:
         return json.load(f)
 
 

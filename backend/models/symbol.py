@@ -2,9 +2,8 @@
 电气图元符号 ORM 模型
 """
 from datetime import datetime
-from typing import Optional
 
-from sqlalchemy import String, Text, DateTime, Float, Boolean, Integer, func
+from sqlalchemy import Boolean, DateTime, Float, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from models.session import Base
@@ -58,7 +57,7 @@ class Symbol(Base):
         Float, nullable=False, default=1.0,
         comment="符号高度（单位：mm）"
     )
-    insertion_point: Mapped[Optional[str]] = mapped_column(
+    insertion_point: Mapped[str | None] = mapped_column(
         String(50), nullable=True, default="0,0",
         comment="插入基点坐标，如 '0,0'"
     )
@@ -66,7 +65,7 @@ class Symbol(Base):
         Text, nullable=False, default="[]",
         comment="标签列表（JSON 字符串），用于搜索"
     )
-    svg_data: Mapped[Optional[str]] = mapped_column(
+    svg_data: Mapped[str | None] = mapped_column(
         Text, nullable=True,
         comment="SVG 矢量预览图"
     )

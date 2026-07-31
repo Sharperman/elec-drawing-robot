@@ -2,9 +2,9 @@
 所有 API 请求/响应 Pydantic v2 Schema
 """
 from datetime import datetime
-from typing import Any, Optional
-from pydantic import BaseModel, Field, field_validator
+from typing import Any
 
+from pydantic import BaseModel, Field, field_validator
 
 # ============================================================
 # 通用响应结构
@@ -38,7 +38,7 @@ class ChatRequest(BaseModel):
     """发送对话消息请求"""
     session_id: str = Field(..., description="会话 ID")
     message: str = Field(..., min_length=1, max_length=4096, description="用户消息")
-    image_data: Optional[str] = Field(None, description="附带图片的 base64 数据")
+    image_data: str | None = Field(None, description="附带图片的 base64 数据")
     stream: bool = Field(default=True, description="是否使用 SSE 流式响应")
     mode: RunMode = Field(default="auto", description="运行模式: auto=自动, check=图纸审查, draw=绘图")
 
@@ -54,7 +54,7 @@ class ChatConfirmRequest(BaseModel):
     """确认执行 Agent 计划请求"""
     session_id: str
     confirm: bool = Field(..., description="true=确认执行，false=取消")
-    modifications: Optional[str] = Field(None, description="用户对计划的修改说明")
+    modifications: str | None = Field(None, description="用户对计划的修改说明")
 
 
 class MessageSchema(BaseModel):
@@ -63,10 +63,10 @@ class MessageSchema(BaseModel):
     session_id: str
     role: str
     content: str
-    tool_calls: Optional[str] = None
-    image_data: Optional[str] = None
+    tool_calls: str | None = None
+    image_data: str | None = None
     is_streaming: bool = False
-    token_count: Optional[int] = None
+    token_count: int | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -77,9 +77,9 @@ class SessionSchema(BaseModel):
     id: int
     session_id: str
     title: str
-    drawing_file: Optional[str] = None
-    drawing_name: Optional[str] = None
-    standard_id: Optional[int] = None
+    drawing_file: str | None = None
+    drawing_name: str | None = None
+    standard_id: int | None = None
     is_active: bool
     created_at: datetime
     updated_at: datetime
@@ -90,8 +90,8 @@ class SessionSchema(BaseModel):
 class CreateSessionRequest(BaseModel):
     """创建会话请求"""
     title: str = Field(default="新建会话", max_length=200)
-    drawing_file: Optional[str] = None
-    standard_id: Optional[int] = None
+    drawing_file: str | None = None
+    standard_id: int | None = None
 
 
 # ============================================================
@@ -101,7 +101,7 @@ class CreateSessionRequest(BaseModel):
 class RecognitionRequest(BaseModel):
     """图片识别请求"""
     image_data: str = Field(..., description="图片的 base64 编码")
-    session_id: Optional[str] = Field(None)
+    session_id: str | None = Field(None)
 
 
 class DetectedElement(BaseModel):
@@ -131,16 +131,16 @@ class RecognitionResponse(BaseModel):
 class AutoCADStatusResponse(BaseModel):
     """AutoCAD 连接状态"""
     connected: bool
-    drawing_name: Optional[str] = None
-    drawing_path: Optional[str] = None
-    autocad_version: Optional[str] = None
+    drawing_name: str | None = None
+    drawing_path: str | None = None
+    autocad_version: str | None = None
     entity_count: int = 0
     last_check: datetime
 
 
 class AutoCADConnectRequest(BaseModel):
     """连接 AutoCAD 请求"""
-    version: Optional[str] = Field(None, description="AutoCAD ProgID，如 AutoCAD.Application.25")
+    version: str | None = Field(None, description="AutoCAD ProgID，如 AutoCAD.Application.25")
 
 
 # ============================================================
@@ -183,12 +183,12 @@ class CreateSymbolRequest(BaseModel):
 
 class UpdateSymbolRequest(BaseModel):
     """更新图元符号请求"""
-    name: Optional[str] = None
-    description: Optional[str] = None
-    block_name: Optional[str] = None
-    layer: Optional[str] = None
-    tags: Optional[list[str]] = None
-    is_active: Optional[bool] = None
+    name: str | None = None
+    description: str | None = None
+    block_name: str | None = None
+    layer: str | None = None
+    tags: list[str] | None = None
+    is_active: bool | None = None
 
 
 # ============================================================
@@ -238,12 +238,12 @@ class CreateStandardRequest(BaseModel):
 
 class UpdateStandardRequest(BaseModel):
     """更新绘图规范请求"""
-    name: Optional[str] = None
-    description: Optional[str] = None
-    version: Optional[str] = None
-    text_style: Optional[str] = None
-    text_height: Optional[float] = None
-    is_active: Optional[bool] = None
+    name: str | None = None
+    description: str | None = None
+    version: str | None = None
+    text_style: str | None = None
+    text_height: float | None = None
+    is_active: bool | None = None
 
 
 class ActivateStandardRequest(BaseModel):
@@ -258,13 +258,13 @@ class ActivateStandardRequest(BaseModel):
 class FeedbackRequest(BaseModel):
     """提交用户反馈请求"""
     session_id: str
-    message_id: Optional[int] = None
+    message_id: int | None = None
     feedback_type: str = Field(..., description="positive/negative/correction/suggestion")
     original_input: str = Field(default="")
     agent_output: str = Field(default="")
     user_comment: str = Field(default="", max_length=2000)
-    correction: Optional[str] = Field(None, max_length=2000)
-    rating: Optional[int] = Field(None, ge=1, le=5)
+    correction: str | None = Field(None, max_length=2000)
+    rating: int | None = Field(None, ge=1, le=5)
 
     @field_validator("feedback_type")
     @classmethod

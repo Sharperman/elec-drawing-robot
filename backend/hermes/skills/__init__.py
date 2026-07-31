@@ -37,7 +37,7 @@ class HermesSkill(ABC):
         class _Tool(BaseTool):
             name: str = skill.name
             description: str = skill.description
-            args_schema: Type[BaseModel] = HermesSkillInput
+            args_schema: type[BaseModel] = HermesSkillInput
 
             def _run(self, **kwargs) -> str:
                 # 状态追踪
@@ -53,7 +53,7 @@ class HermesSkill(ABC):
         return tool
 
 
-def make_skill(name: str, description: str, input_schema: Type[BaseModel], execute_fn) -> HermesSkill:
+def make_skill(name: str, description: str, input_schema: type[BaseModel], execute_fn) -> HermesSkill:
     """
     快捷创建 Skill 的工厂函数。
     用于外部模块快速注册自定义 Skill，无需定义完整类。
@@ -71,7 +71,7 @@ def make_skill(name: str, description: str, input_schema: Type[BaseModel], execu
             class _Tool(BaseTool):
                 name: str = skill.name
                 description: str = skill.description
-                args_schema: Type[BaseModel] = input_schema
+                args_schema: type[BaseModel] = input_schema
 
                 def _run(self, **kwargs) -> str:
                     from hermes import hermes_state

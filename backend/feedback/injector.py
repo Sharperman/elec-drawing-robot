@@ -2,7 +2,6 @@
 规则注入器
 将 LearnedRule 列表注入到 Agent 提示词中
 """
-from typing import Optional
 
 from loguru import logger
 

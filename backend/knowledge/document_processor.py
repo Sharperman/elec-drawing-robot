@@ -10,12 +10,10 @@ import hashlib
 import io
 import json
 import os
-import re
 from pathlib import Path
-from typing import Optional, List, Tuple
+import re
 
 from loguru import logger
-
 
 # ── PaddleOCR 延迟加载 ──────────────────────────────
 
@@ -34,8 +32,8 @@ def _get_paddle_ocr():
 def _get_tesseract():
     """Tesseract fallback"""
     try:
-        import pytesseract
         from PIL import Image
+        import pytesseract
         return True
     except ImportError:
         logger.warning("pytesseract not installed")
@@ -44,7 +42,7 @@ def _get_tesseract():
 
 # ── L1: 原生文本提取 ─────────────────────────────────
 
-def extract_text_native(file_path: str, file_type: str) -> Tuple[str, int]:
+def extract_text_native(file_path: str, file_type: str) -> tuple[str, int]:
     """
     从数字文档中提取纯文本。
     返回 (text, char_count)
@@ -114,7 +112,7 @@ def _extract_pptx_text(file_path: str) -> str:
 
 # ── L2: OCR 引擎 ────────────────────────────────────
 
-def extract_text_ocr(file_path: str, file_type: str) -> Tuple[str, int, str]:
+def extract_text_ocr(file_path: str, file_type: str) -> tuple[str, int, str]:
     """
     OCR 文本提取。优先 PaddleOCR → Tesseract fallback。
     返回 (text, char_count, engine_name)
@@ -152,8 +150,8 @@ def extract_text_ocr(file_path: str, file_type: str) -> Tuple[str, int, str]:
     # Fallback: Tesseract
     if _get_tesseract():
         try:
-            import pytesseract
             from PIL import Image
+            import pytesseract
             parts = []
             for img_bytes in images:
                 img = Image.open(io.BytesIO(img_bytes))
@@ -170,7 +168,7 @@ def extract_text_ocr(file_path: str, file_type: str) -> Tuple[str, int, str]:
     return "", 0, engine_name
 
 
-def _get_page_images(file_path: str, file_type: str) -> List[bytes]:
+def _get_page_images(file_path: str, file_type: str) -> list[bytes]:
     """从文档中提取页面图像 (bytes)"""
     images = []
     try:
@@ -223,15 +221,15 @@ def check_quality(text: str, file_type: str) -> dict:
     if char_count < 100:
         return {
             "score": 0.0, "passed": False, "needs_l3": True,
-            "issues": ["文本量不足 ({} 字符)".format(char_count)],
+            "issues": [f"文本量不足 ({char_count} 字符)"],
             "notes": "L1 提取文本过少，需进行 OCR",
         }
 
     # 如果文本充足，用 LLM 快速判断
     try:
         from agent.llm_factory import create_primary_llm
-        from models.session import get_session_local
         from langchain_core.messages import HumanMessage
+        from models.session import get_session_local
 
         db = get_session_local()()
         llm = create_primary_llm(db=db)
@@ -263,7 +261,7 @@ def check_quality(text: str, file_type: str) -> dict:
 
 # ── L3: Vision LLM 重扫 ─────────────────────────────
 
-def extract_text_vision_llm(file_path: str, file_type: str, max_pages: int = 20) -> Tuple[str, int]:
+def extract_text_vision_llm(file_path: str, file_type: str, max_pages: int = 20) -> tuple[str, int]:
     """
     使用 Vision LLM 对文档页面进行重扫（仅用于质量不达标的文档）。
     返回 (text, char_count)
@@ -276,8 +274,8 @@ def extract_text_vision_llm(file_path: str, file_type: str, max_pages: int = 20)
     parts = []
     try:
         from agent.llm_factory import create_vision_llm
-        from models.session import get_session_local
         from langchain_core.messages import HumanMessage
+        from models.session import get_session_local
 
         db = get_session_local()()
         llm = create_vision_llm(db=db)
@@ -311,7 +309,7 @@ def extract_text_vision_llm(file_path: str, file_type: str, max_pages: int = 20)
 
 # ── 图片提取 ──────────────────────────────────────
 
-def extract_pdf_images(file_path: str, output_dir: str, doc_id: int) -> List[dict]:
+def extract_pdf_images(file_path: str, output_dir: str, doc_id: int) -> list[dict]:
     """
     从 PDF 提取嵌入式图片，保存到 output_dir。
     返回 [{"path": "...", "page": 1, "width": 800, "height": 600, "caption": ""}, ...]
@@ -355,7 +353,7 @@ def extract_pdf_images(file_path: str, output_dir: str, doc_id: int) -> List[dic
 
 # ── 表格提取 ──────────────────────────────────────
 
-def extract_pdf_tables(file_path: str) -> List[str]:
+def extract_pdf_tables(file_path: str) -> list[str]:
     """
     使用 PyMuPDF 的表格检测提取 PDF 表格为 Markdown 格式。
     返回 ["| A | B |\n| 1 | 2 |", ...]
@@ -377,7 +375,7 @@ def extract_pdf_tables(file_path: str) -> List[str]:
     return tables
 
 
-def extract_docx_tables(file_path: str) -> List[str]:
+def extract_docx_tables(file_path: str) -> list[str]:
     """从 Word 文档提取表格为 Markdown 格式"""
     tables = []
     try:
@@ -397,7 +395,7 @@ def extract_docx_tables(file_path: str) -> List[str]:
     return tables
 
 
-def _table_to_markdown(rows: List[List[str]]) -> str:
+def _table_to_markdown(rows: list[list[str]]) -> str:
     """将二维列表转为 Markdown 表格"""
     if not rows or not rows[0]:
         return ""
@@ -469,8 +467,8 @@ def generate_image_caption(image_path: str) -> str:
         b64 = base64.b64encode(img_bytes).decode("utf-8")
 
         from agent.llm_factory import create_vision_llm
-        from models.session import get_session_local
         from langchain_core.messages import HumanMessage
+        from models.session import get_session_local
 
         db = get_session_local()()
         llm = create_vision_llm(db=db)
@@ -518,7 +516,6 @@ class DocumentProcessor:
 
         # ── 图片提取（并行，不依赖 OCR）──
         if file_type in ("pdf", "jpg", "jpeg", "png"):
-            from config import settings
             img_dir = os.path.join("data", "knowledge_images", str(hashlib.md5(file_path.encode()).hexdigest()[:8]))
             result["images"] = extract_pdf_images(file_path, img_dir, 0)  # doc_id 在外层填充
 
@@ -564,7 +561,7 @@ class DocumentProcessor:
                 return result
 
         # ── L3: Vision LLM ──
-        logger.info(f"L2 仍需改进 (needs_l3=True), 执行 L3 Vision LLM...")
+        logger.info("L2 仍需改进 (needs_l3=True), 执行 L3 Vision LLM...")
         l3_text, l3_count = extract_text_vision_llm(file_path, file_type)
         result["l3_result"] = {"text": l3_text, "char_count": l3_count}
 

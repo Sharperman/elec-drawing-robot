@@ -6,9 +6,9 @@ Tests for:
   - autocad/drawing_ops.py   - DrawingOps methods (mocked COM layer)
 """
 import sys
-import pytest
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, PropertyMock, patch
 
+import pytest
 
 # ============================================================
 # Module-level mock for win32com so drawing_ops can be imported
