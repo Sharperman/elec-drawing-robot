@@ -33,7 +33,6 @@ elec-drawing-robot/
 │   ├── agent/               # LangChain Agent
 │   ├── autocad/             # AutoCAD COM 操作
 │   ├── knowledge/           # 知识库 + RAG
-│   ├── recognition/         # YOLOv8 识别
 │   └── feedback/            # 反馈自学习
 ├── frontend/                # Electron + React 前端
 │   ├── electron/            # 主进程
@@ -92,16 +91,6 @@ cd frontend
 npm run build
 npm run dist
 ```
-
-## YOLOv8 模型放置
-
-将训练好的模型文件放置于：
-
-```
-backend/recognition/models/elec_symbol_yolov8.pt
-```
-
-若模型文件不存在，系统将自动降级为基于规则的简单识别（颜色区域检测），并在日志中打印警告。
 
 ## AutoCAD 连接说明
 
